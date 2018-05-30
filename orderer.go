@@ -13,48 +13,46 @@ import (
 	"google.golang.org/grpc/credentials"
 	"github.com/golang/protobuf/proto"
 	"time"
-	"google.golang.org/grpc/keepalive"
 )
 
 // Orderer expose API's to communicate with orderers.
 type Orderer struct {
-	Name   string
-	Uri    string
-	Opts   []grpc.DialOption
-	caPath string
-	con    *grpc.ClientConn
-	client orderer.AtomicBroadcastClient
+	Name            string
+	Uri             string
+	Opts            []grpc.DialOption
+	caPath          string
+	con *grpc.ClientConn
 }
 
 const timeout = 5
 
 // Broadcast Broadcast envelope to orderer for execution.
 func (o *Orderer) Broadcast(envelope *common.Envelope) (*orderer.BroadcastResponse, error) {
-	if o.con == nil {
+	if o.con ==nil{
+		o.Opts=append(o.Opts,grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(GRPC_MAX_SIZE),
+			grpc.MaxCallSendMsgSize(GRPC_MAX_SIZE)))
 		c, err := grpc.Dial(o.Uri, o.Opts...)
 		if err != nil {
 			return nil, fmt.Errorf("cannot connect to orderer: %s err is: %v", o.Name, err)
 		}
-		o.con = c
-		o.client = orderer.NewAtomicBroadcastClient(o.con)
+		o.con=c
 	}
-	bcc, err := o.client.Broadcast(context.Background())
+	bcc, err := orderer.NewAtomicBroadcastClient(o.con).Broadcast(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	defer bcc.CloseSend()
 	bcc.Send(envelope)
-	response, err := bcc.Recv()
+	response, err:= bcc.Recv()
 	if err != nil {
 		return nil, err
 	}
 	if response.Status != common.Status_SUCCESS {
-		return nil, fmt.Errorf("unexpected status: %v", response.Status)
+		return nil,fmt.Errorf("unexpected status: %v", response.Status)
 	}
 
-	return response, err
+	return response,err
 }
-
 // Deliver delivers envelope to orderer. Please note that new connection will be created on every call of Deliver.
 func (o *Orderer) Deliver(envelope *common.Envelope) (*common.Block, error) {
 
@@ -87,7 +85,8 @@ func (o *Orderer) Deliver(envelope *common.Envelope) (*common.Block, error) {
 			case *orderer.DeliverResponse_Status:
 				if t.Status == common.Status_SUCCESS {
 					return block, nil
-				} else {
+				}
+				if t.Status != common.Status_SUCCESS {
 					return nil, fmt.Errorf("orderer response with status: %v", t.Status)
 				}
 			case *orderer.DeliverResponse_Block:
@@ -100,7 +99,7 @@ func (o *Orderer) Deliver(envelope *common.Envelope) (*common.Block, error) {
 	}
 }
 
-func (o *Orderer) getGenesisBlock(identity Identity, crypto CryptoSuite, channelId string) (*common.Block, error) {
+func (o *Orderer) getGenesisBlock(identity *Identity, crypto CryptoSuite, channel *Channel) (*common.Block, error) {
 
 	seekInfo := &orderer.SeekInfo{
 		Start:    &orderer.SeekPosition{Type: &orderer.SeekPosition_Specified{Specified: &orderer.SeekSpecified{Number: 0}}},
@@ -112,7 +111,7 @@ func (o *Orderer) getGenesisBlock(identity Identity, crypto CryptoSuite, channel
 		return nil, err
 	}
 
-	creator, err := marshalProtoIdentity(identity)
+	creator, err := marshalProtoIdentity(identity, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +120,7 @@ func (o *Orderer) getGenesisBlock(identity Identity, crypto CryptoSuite, channel
 		return nil, err
 	}
 
-	headerBytes, err := channelHeader(common.HeaderType_DELIVER_SEEK_INFO, txId, channelId, 0, nil)
+	headerBytes, err := channelHeader(common.HeaderType_DELIVER_SEEK_INFO, txId, channel, 0, nil)
 	signatureHeaderBytes, err := signatureHeader(creator, txId)
 	if err != nil {
 		return nil, err
@@ -142,7 +141,7 @@ func (o *Orderer) getGenesisBlock(identity Identity, crypto CryptoSuite, channel
 // NewOrdererFromConfig create new Orderer from config
 func NewOrdererFromConfig(conf OrdererConfig) (*Orderer, error) {
 	o := Orderer{Uri: conf.Host, caPath: conf.TlsPath}
-	if !conf.UseTLS {
+	if conf.Insecure {
 		o.Opts = []grpc.DialOption{grpc.WithInsecure()}
 	} else if o.caPath != "" {
 		creds, err := credentials.NewClientTLSFromFile(o.caPath, "")
@@ -150,16 +149,9 @@ func NewOrdererFromConfig(conf OrdererConfig) (*Orderer, error) {
 			return nil, fmt.Errorf("cannot read orderer %s credentials err is: %v", o.Name, err)
 		}
 		o.Opts = append(o.Opts, grpc.WithTransportCredentials(creds))
+
 	}
-	o.Opts = append(o.Opts,
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                time.Duration(1) * time.Minute,
-			Timeout:             time.Duration(20) * time.Second,
-			PermitWithoutStream: true,
-		}),
-		grpc.WithBlock(),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(maxRecvMsgSize),
-			grpc.MaxCallSendMsgSize(maxSendMsgSize)))
+	o.Opts = append(o.Opts, grpc.WithBlock())
+	o.Opts = append(o.Opts, grpc.WithTimeout(3*time.Second))
 	return &o, nil
 }

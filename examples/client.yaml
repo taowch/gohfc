@@ -1,36 +1,35 @@
----
 crypto:
   family: ecdsa
   algorithm: P256-SHA256
   hash: SHA2-256
 orderers:
   orderer0:
-    host: orderer0.example.com:7050
-    useTLS: false
-    tlsPath: /path/to/tls/server.pem
-  orderer1:
-    host: orderer0.example.com:7048
-    useTLS: false
-    tlsPath: /path/to/tls/server.pem
+    host: orderer.ord1.example.com:7050
+    insecure: true
+    tlsPath: ./crypto-config/ordererOrganizations/ord1.example.com/orderers/orderer.ord1.example.com/tls/server.crt
 peers:
-  peer01:
-    host: peer0.example.com:7051
-    useTLS: false
-    tlsPath: /path/to/tls/server.pem
-  peer11:
-    host: peer1.example.com:8051
-    useTLS: false
-    tlsPath: /path/to/tls/server.pem
-  peer02:
-    host: peer0.example.com:9051
-    useTLS: false
-    tlsPath: /path/to/tls/server.pem
-  peer12:
-      host: peer1.example.com:10051
-      useTLS: false
-      tlsPath: /path/to/tls/server.pem
+  peer0:
+    host: peer0.org1.example.com:7051
+    orgname: org1
+    insecure: true
+    tlsPath: ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
+  peer1:
+    host: peer1.org1.example.com:8051
+    orgname: org1
+    insecure: true
+    tlsPath: ./crypto-config/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/tls/server.crt
 eventPeers:
   peer0:
-    host: peer0.example.com:7051
-    useTLS: false
-    tlsPath: /path/to/tls/server.pem
+    host: peer0.org1.example.com:7053
+    insecure: true
+    tlsPath: ./crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
+other:
+    mspConfigPath: ./crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    localMspId:          Org1MSP
+    channelId:           mychannel
+    chaincodeName:       mycc
+    chaincodeVersion:    1.0
+policy:
+    orgs: org1 org2
+    rule: or
+

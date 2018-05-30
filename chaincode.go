@@ -33,7 +33,7 @@ const (
 
 // ChainCode the fields necessary to execute operation over chaincode.
 type ChainCode struct {
-	ChannelId    string
+	Channel      *Channel
 	Name         string
 	Version      string
 	Type         ChainCodeType
@@ -59,20 +59,13 @@ func (c *ChainCode) toChainCodeArgs() ([][]byte) {
 
 // InstallRequest holds fields needed to install chaincode
 type InstallRequest struct {
-	ChannelId        string
+	Channel          *Channel
 	ChainCodeName    string
 	ChainCodeVersion string
 	ChainCodeType    ChainCodeType
 	Namespace        string
 	SrcPath          string
 	Libraries        []ChaincodeLibrary
-}
-
-type CollectionConfig struct {
-	Name               string
-	RequiredPeersCount int32
-	MaximumPeersCount  int32
-	Organizations      []string
 }
 
 type ChaincodeLibrary struct {
@@ -89,7 +82,7 @@ type ChainCodesResponse struct {
 
 // createInstallProposal read chaincode from provided source and namespace, pack it and generate install proposal
 // transaction. Transaction is not send from this func
-func createInstallProposal(identity Identity, req *InstallRequest) (*transactionProposal, error) {
+func createInstallProposal(identity *Identity, req *InstallRequest) (*transactionProposal, error) {
 
 	var packageBytes []byte
 	var err error
@@ -116,13 +109,13 @@ func createInstallProposal(identity Identity, req *InstallRequest) (*transaction
 		return nil, err
 	}
 
-	spec, err := chainCodeInvocationSpec(ChainCode{Type: req.ChainCodeType,
+	spec, err := chainCodeInvocationSpec(&ChainCode{Type: req.ChainCodeType,
 		Name: LSCC,
 		Args: []string{"install"},
 		ArgBytes: depSpec,
 	})
 
-	creator, err := marshalProtoIdentity(identity)
+	creator, err := marshalProtoIdentity(identity, req.Channel)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +125,7 @@ func createInstallProposal(identity Identity, req *InstallRequest) (*transaction
 	}
 	ccHdrExt := &peer.ChaincodeHeaderExtension{ChaincodeId: &peer.ChaincodeID{Name: LSCC}}
 
-	channelHeaderBytes, err := channelHeader(common.HeaderType_ENDORSER_TRANSACTION, txId, req.ChannelId, 0, ccHdrExt)
+	channelHeaderBytes, err := channelHeader(common.HeaderType_ENDORSER_TRANSACTION, txId, req.Channel, 0, ccHdrExt)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +158,7 @@ func createInstallProposal(identity Identity, req *InstallRequest) (*transaction
 
 // createInstantiateProposal creates instantiate proposal transaction for already installed chaincode.
 // transaction is not send from this func
-func createInstantiateProposal(identity Identity, req *ChainCode, operation string, collectionConfig []byte) (*transactionProposal, error) {
+func createInstantiateProposal(identity *Identity, req *ChainCode, operation string) (*transactionProposal, error) {
 	if operation != "deploy" && operation != "upgrade" {
 		return nil, fmt.Errorf("install proposall accept only 'deploy' and 'upgrade' operations")
 	}
@@ -181,7 +174,7 @@ func createInstantiateProposal(identity Identity, req *ChainCode, operation stri
 		return nil, err
 	}
 
-	policy, err := defaultPolicy(identity.MspId)
+	policy, err := defaultPolicy(req.Channel.MspId)
 	if err != nil {
 		return nil, err
 	}
@@ -190,25 +183,18 @@ func createInstantiateProposal(identity Identity, req *ChainCode, operation stri
 		return nil, err
 	}
 
-	args := [][]byte{
-		[]byte(operation),
-		[]byte(req.ChannelId),
-		depSpec,
-		marshPolicy,
-		[]byte("escc"),
-		[]byte("vscc"),
-	}
-	if len(collectionConfig) > 0 {
-		args = append(args, collectionConfig)
-	}
-
-	spec, err := chainCodeInvocationSpec(ChainCode{
-		Type:    req.Type,
-		Name:    LSCC,
-		rawArgs: args,
+	spec, err := chainCodeInvocationSpec(&ChainCode{
+		Type: req.Type,
+		Name: LSCC,
+		rawArgs: [][]byte{
+			[]byte(operation),
+			[]byte(req.Channel.ChannelName),
+			depSpec, marshPolicy,
+			[]byte("escc"), []byte("vscc"),
+		},
 	})
 
-	creator, err := marshalProtoIdentity(identity)
+	creator, err := marshalProtoIdentity(identity, req.Channel)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +204,7 @@ func createInstantiateProposal(identity Identity, req *ChainCode, operation stri
 	}
 	headerExtension := &peer.ChaincodeHeaderExtension{ChaincodeId: &peer.ChaincodeID{Name: LSCC}}
 
-	channelHeaderBytes, err := channelHeader(common.HeaderType_ENDORSER_TRANSACTION, txId, req.ChannelId, 0, headerExtension)
+	channelHeaderBytes, err := channelHeader(common.HeaderType_ENDORSER_TRANSACTION, txId, req.Channel, 0, headerExtension)
 	if err != nil {
 		return nil, err
 	}
