@@ -35,6 +35,7 @@ type CryptoConfig struct {
 // PeerConfig hold config values for Peer. ULR is in address:port notation
 type PeerConfig struct {
 	Host    string `yaml:"host"`
+	OrgName string
 	UseTLS  bool   `yaml:"useTLS"`
 	TlsPath string `yaml:"tlsPath"`
 }
