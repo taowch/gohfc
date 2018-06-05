@@ -68,6 +68,7 @@ func InitSDK(configPath string) error {
 		sdklogger.Debugf("load cert from file failed:", err.Error())
 		return err
 	}
+	handler.identity.MspId = viper.GetString("other.localMspId")
 
 	return err
 }
