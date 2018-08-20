@@ -15,6 +15,8 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"time"
+	"fmt"
+	"golang.org/x/crypto/sha3"
 )
 
 const GRPC_MAX_SIZE = 100 * 1024 * 1024
@@ -25,15 +27,24 @@ type BlockEventResponse struct {
 	Error error
 	// TxId is transaction id that generates this event
 	IsVaild          bool
-	BlockHeight      uint64
+	BlockHeight      int64
+	BlockSize        int64
+	BlockHash        string
+	BlockPreHash     string
+	TxTime 			 time.Time
 	TxIndex          int
+	TxSize 			 int
 	TxID             string
+	TxHash           string
+	TxCount 		 int
+	TxType 			 string
 	ChannelName      string
 	ChainCodeName    string
 	ChainCodeVersion string
 	Status           int32
 	ChainCodeInput   [][]byte
 	CCEvents         []*CCEvent
+	BlockTime 		 time.Time
 }
 
 // CCEvent represent custom event send from chaincode using `stub.SetEvent`
@@ -127,16 +138,20 @@ func (e *eventHub) readBlock(response chan<- BlockEventResponse) {
 
 		switch in.Event.(type) {
 		case *peer.Event_Block:
+			tmp, _ :=proto.Marshal(in)
 			meta := in.GetBlock().Metadata.Metadata
+			now := time.Now().UTC()
+			count := len(in.GetBlock().Data.Data)
+			size := len(tmp)
 			for i, bd := range in.GetBlock().Data.Data {
-				response <- DecodeEventBlock(bd, in.GetBlock().GetHeader().Number, i, meta)
+				response <- DecodeEventBlock(bd, in.GetBlock().GetHeader().Number, i, meta, in.GetBlock().Header, now, count, size)
 			}
 
 		}
 	}
 }
 
-func DecodeEventBlock(pl []byte, blockNum uint64, idx int, metadata [][]byte) BlockEventResponse {
+func DecodeEventBlock(pl []byte, blockNum uint64, idx int, metadata [][]byte, blockHeader *common.BlockHeader, now time.Time, count, size int) BlockEventResponse {
 	response := BlockEventResponse{}
 	envelope := new(common.Envelope)
 	payload := new(common.Payload)
@@ -158,11 +173,24 @@ func DecodeEventBlock(pl []byte, blockNum uint64, idx int, metadata [][]byte) Bl
 		return response
 	}
 
+	h := sha3.New256()
+	h.Write(pl)
+	hash := h.Sum(nil)
+
 	txsFltr := util.TxValidationFlags(metadata[common.BlockMetadataIndex_TRANSACTIONS_FILTER])
 	response.IsVaild = txsFltr.IsValid(idx)
-	response.BlockHeight = blockNum
+	response.BlockHeight = int64(blockNum)
+	response.BlockHash = fmt.Sprintf("%x", blockHeader.DataHash)
+	response.BlockPreHash = fmt.Sprintf("%x", blockHeader.PreviousHash)
+	response.BlockSize = int64(size)
+	response.BlockTime = now
+	response.TxTime = time.Unix(header.Timestamp.Seconds, int64(header.Timestamp.Nanos))
 	response.TxIndex = idx
+	response.TxCount = count
 	response.TxID = header.TxId
+	response.TxHash = fmt.Sprintf("%x", hash)
+	response.TxSize = len(pl)
+	response.TxType = common.HeaderType_name[header.Type]
 	response.ChannelName = header.ChannelId
 	if ex.ChaincodeId != nil {
 		response.ChainCodeName = ex.ChaincodeId.Name
