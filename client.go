@@ -22,6 +22,7 @@ type FabricClient struct {
 	Orderers   map[string]*Orderer
 	EventPeers map[string]*Peer
 	Channel    ChannelConfig
+	Mq         Mq
 }
 
 // CreateUpdateChannel read channel config generated (usually) from configtxgen and send it to orderer
@@ -572,7 +573,7 @@ func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
 		newOrderer.Name = name
 		orderers[name] = newOrderer
 	}
-	client := FabricClient{Peers: peers, EventPeers: eventPeers, Orderers: orderers, Crypto: crypto, Channel: config.ChannelConfig}
+	client := FabricClient{Peers: peers, EventPeers: eventPeers, Orderers: orderers, Crypto: crypto, Channel: config.ChannelConfig, Mq: config.Mq}
 	return &client, nil
 }
 
