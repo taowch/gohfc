@@ -5,13 +5,14 @@ License: Apache License Version 2.0
 package gohfc
 
 import (
-	"github.com/hyperledger/fabric/protos/common"
-	"errors"
-	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/protos/peer"
-	"github.com/hyperledger/fabric/protos/orderer"
 	"context"
+	"errors"
 	"fmt"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/protos/common"
+	"github.com/hyperledger/fabric/protos/orderer"
+	"github.com/hyperledger/fabric/protos/peer"
 )
 
 // FabricClient expose API's to work with Hyperledger Fabric
@@ -20,11 +21,12 @@ type FabricClient struct {
 	Peers      map[string]*Peer
 	Orderers   map[string]*Orderer
 	EventPeers map[string]*Peer
+	Channel    ChannelConfig
 }
 
 // CreateUpdateChannel read channel config generated (usually) from configtxgen and send it to orderer
 // This step is needed before any peer is able to join the channel and before any future updates of the channel.
-func (c *FabricClient) CreateUpdateChannel(identity Identity, path string, channelId string, orderer string) (error) {
+func (c *FabricClient) CreateUpdateChannel(identity Identity, path string, channelId string, orderer string) error {
 
 	ord, ok := c.Orderers[orderer]
 	if !ok {
@@ -75,8 +77,8 @@ func (c *FabricClient) JoinChannel(identity Identity, channelId string, peers []
 	}
 
 	chainCode := ChainCode{Name: CSCC,
-		Type: ChaincodeSpec_GOLANG,
-		Args: []string{"JoinChain"},
+		Type:     ChaincodeSpec_GOLANG,
+		Args:     []string{"JoinChain"},
 		ArgBytes: blockBytes}
 
 	invocationBytes, err := chainCodeInvocationSpec(chainCode)
@@ -489,7 +491,7 @@ func (c *FabricClient) QueryTransaction(identity Identity, channelId string, txI
 // To cancel listening provide context with cancellation option and call cancel.
 // User can listen for same events in same channel in multiple peers for redundancy using same `chan<- EventBlockResponse`
 // In this case every peer will send its events, so identical events may appear more than once in channel.
-func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity, eventPeer, channelId string, response chan<- EventBlockResponse) (error) {
+func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity, eventPeer, channelId string, response chan<- EventBlockResponse) error {
 	ep, ok := c.EventPeers[eventPeer]
 	if !ok {
 		return ErrPeerNameNotFound
@@ -509,7 +511,7 @@ func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity
 // ListenForFilteredBlock listen for events in blockchain. Difference with `ListenForFullBlock` is that event names
 // will be returned but NOT events data. Also full block data will not be available.
 // Other options are same as `ListenForFullBlock`.
-func (c *FabricClient) ListenForFilteredBlock(ctx context.Context, identity Identity, eventPeer, channelId string, response chan<- EventBlockResponse) (error) {
+func (c *FabricClient) ListenForFilteredBlock(ctx context.Context, identity Identity, eventPeer, channelId string, response chan<- EventBlockResponse) error {
 	ep, ok := c.EventPeers[eventPeer]
 	if !ok {
 		return ErrPeerNameNotFound
@@ -525,7 +527,6 @@ func (c *FabricClient) ListenForFilteredBlock(ctx context.Context, identity Iden
 	listener.Listen(response)
 	return nil
 }
-
 
 // NewFabricClientFromConfig create a new FabricClient from ClientConfig
 func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
@@ -571,7 +572,7 @@ func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
 		newOrderer.Name = name
 		orderers[name] = newOrderer
 	}
-	client := FabricClient{Peers: peers, EventPeers: eventPeers, Orderers: orderers, Crypto: crypto}
+	client := FabricClient{Peers: peers, EventPeers: eventPeers, Orderers: orderers, Crypto: crypto, Channel: config.ChannelConfig}
 	return &client, nil
 }
 

@@ -5,21 +5,43 @@ License: Apache License Version 2.0
 package gohfc
 
 import (
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v2"
 )
 
 // ClientConfig holds config data for crypto, peers and orderers
 type ClientConfig struct {
-	CryptoConfig                        `yaml:"crypto"`
-	Orderers   map[string]OrdererConfig `yaml:"orderers"`
-	Peers      map[string]PeerConfig    `yaml:"peers"`
-	EventPeers map[string]PeerConfig    `yaml:"eventPeers"`
+	CryptoConfig  `yaml:"crypto"`
+	Orderers      map[string]OrdererConfig `yaml:"orderers"`
+	Peers         map[string]PeerConfig    `yaml:"peers"`
+	EventPeers    map[string]PeerConfig    `yaml:"eventPeers"`
+	ChannelConfig `yaml:"channel"`
+	Mq            `yaml:"mq"`
+}
+
+type ChannelConfig struct {
+	MspConfigPath    string `yaml:"mspConfigPath"`
+	LocalMspId       string `yaml:"localMspId"`
+	ChannelId        string `yaml:"channelId"`
+	ChaincodeName    string `yaml:"chaincodeName"`
+	ChaincodeVersion string `yaml:"chaincodeVersion"`
+	ChaincodePolicy  `yaml:"chaincodePolicy"`
+}
+
+type ChaincodePolicy struct {
+	Orgs []string `yaml:"orgs"`
+	Rule string   `yaml:"rule"`
+}
+
+type Mq struct {
+	MqAddress []string `yaml:"mqAddress"`
+	QueueName string   `yaml:"queueName"`
 }
 
 // CAConfig holds config for Fabric CA
 type CAConfig struct {
-	CryptoConfig             `yaml:"crypto"`
+	CryptoConfig      `yaml:"crypto"`
 	Uri               string `yaml:"url"`
 	SkipTLSValidation bool   `yaml:"skipTLSValidation"`
 	MspId             string `yaml:"mspId"`
@@ -35,7 +57,7 @@ type CryptoConfig struct {
 // PeerConfig hold config values for Peer. ULR is in address:port notation
 type PeerConfig struct {
 	Host    string `yaml:"host"`
-	OrgName string
+	OrgName string `yaml:"orgName"`
 	UseTLS  bool   `yaml:"useTLS"`
 	TlsPath string `yaml:"tlsPath"`
 }
