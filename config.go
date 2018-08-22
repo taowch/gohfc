@@ -15,6 +15,7 @@ type ClientConfig struct {
 	Orderers   map[string]OrdererConfig `yaml:"orderers"`
 	Peers      map[string]PeerConfig    `yaml:"peers"`
 	EventPeers map[string]PeerConfig    `yaml:"eventPeers"`
+	Discoverys map[string]DisConfig     `yaml:"discoverys"`
 }
 
 // CAConfig holds config for Fabric CA
@@ -41,6 +42,11 @@ type PeerConfig struct {
 
 // OrdererConfig hold config values for Orderer. ULR is in address:port notation
 type OrdererConfig struct {
+	Host    string `yaml:"host"`
+	UseTLS  bool   `yaml:"useTLS"`
+	TlsPath string `yaml:"tlsPath"`
+}
+type DisConfig struct {
 	Host    string `yaml:"host"`
 	UseTLS  bool   `yaml:"useTLS"`
 	TlsPath string `yaml:"tlsPath"`
