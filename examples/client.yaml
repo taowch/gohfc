@@ -4,34 +4,49 @@ crypto:
   algorithm: P256-SHA256
   hash: SHA2-256
 orderers:
-  orderer:
+  orderer0:
     host: orderer0.example.com:7050
-    useTLS: true
-    tlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/orderer.example.com-cert.pem
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
+  orderer1:
+    host: orderer0.example.com:7048
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
 peers:
   peer01:
-    host: peer0.org1.example.com:7051
-    useTLS: true
-    tlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    host: peer0.example.com:7051
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
   peer11:
-    host: peer1.org1.example.com:8051
-    useTLS: true
-    tlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/tls/ca.crt
+    host: peer1.example.com:8051
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
   peer02:
-    host: peer0.org2.example.com:9051
-    useTLS: true
-    tlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+    host: peer0.example.com:9051
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
   peer12:
-      host: peer1.org2.example.com:10051
-      useTLS: true
-      tlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/tls/ca.crt
+    host: peer1.example.com:10051
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
 eventPeers:
   peer0:
-    host: peer0.org1.example.com:7051
-    useTLS: true
-    tlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-discoverys:
-  discovery:
-    Host: peer0.org1.example.com:7051
-    UseTLS: true
-    TlsPath: /opt/gopath/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/peerOrganizations/org1.example.com/users/User1@org1.example.com/tls/ca.crt
+    host: peer0.example.com:7051
+    useTLS: false
+    tlsPath: /path/to/tls/server.pem
+channel:
+    mspConfigPath: ./crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    localMspId:          Org1MSP
+    channelId:           mychannel
+    chaincodeName:       asset
+    chaincodeVersion:    1.0
+    chaincodePolicy:
+      orgs:
+        - org1
+        - org2
+      rule: or
+mq:
+    mqAddress:
+#      - "amqp://xn:123456@10.10.255.103:5672/"
+      - "amqp://guest:guest@localhost:5672/"
+    queueName: "assetQueue"

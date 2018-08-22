@@ -3,14 +3,10 @@ package gohfc
 import (
 	"context"
 	"fmt"
-	"github.com/op/go-logging"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 )
-
-var sdklogger = logging.MustGetLogger("gohfc")
 
 //sdk handler
 type sdkHandler struct {
@@ -25,23 +21,15 @@ func InitSDK(configPath string) error {
 	var err error
 	handler.client, err = NewFabricClient(configPath)
 	if err != nil {
-		sdklogger.Debugf("Error loading file %s err: %v", configPath, err)
 		return err
 	}
-	viper.SetConfigFile(configPath)
-	err = viper.ReadInConfig()
-	if err != nil {
-		sdklogger.Debugf("Read file failed:", err.Error())
-		return err
-	}
-	mspPath := viper.GetString("other.mspConfigPath")
+	mspPath := handler.client.Channel.MspConfigPath
 	if mspPath == "" {
 		return fmt.Errorf("yaml mspPath is empty")
 	}
 	findCert := func(path string) string {
 		list, err := ioutil.ReadDir(path)
 		if err != nil {
-			sdklogger.Debug(err.Error())
 			return ""
 		}
 		var file os.FileInfo
@@ -61,14 +49,11 @@ func InitSDK(configPath string) error {
 	if prikey == "" || pubkey == "" {
 		return fmt.Errorf("prikey or cert is no such file")
 	}
-	sdklogger.Debugf("privateKey : %s", prikey)
-	sdklogger.Debugf("publicKey : %s", pubkey)
 	handler.identity, err = LoadCertFromFile(pubkey, prikey)
 	if err != nil {
-		sdklogger.Debugf("load cert from file failed:", err.Error())
 		return err
 	}
-	handler.identity.MspId = viper.GetString("other.localMspId")
+	handler.identity.MspId = handler.client.Channel.LocalMspId
 
 	return err
 }
@@ -99,8 +84,8 @@ func (sdk *sdkHandler) Query(args []string, peers []string) ([]*QueryResponse, e
 
 // Query query qscc
 func (sdk *sdkHandler) QueryByQscc(args []string, peers []string) ([]*QueryResponse, error) {
-	channelid := viper.GetString("other.channelId")
-	mspId := viper.GetString("other.localMspId")
+	channelid := handler.client.Channel.ChannelId
+	mspId := handler.client.Channel.LocalMspId
 	if channelid == "" || mspId == "" {
 		return nil, fmt.Errorf("channelid or ccname or mspid is empty")
 	}
@@ -152,10 +137,10 @@ func (sdk *sdkHandler) ListenEventFilterBlock(peername, channelid string) (chan 
 }
 
 func getChainCodeObj(args []string) (*ChainCode, error) {
-	channelid := viper.GetString("other.channelId")
-	chaincodeName := viper.GetString("other.chaincodeName")
-	chaincodeVersion := viper.GetString("other.chaincodeVersion")
-	mspId := viper.GetString("other.localMspId")
+	channelid := handler.client.Channel.ChannelId
+	chaincodeName := handler.client.Channel.ChaincodeName
+	chaincodeVersion := handler.client.Channel.ChaincodeVersion
+	mspId := handler.client.Channel.LocalMspId
 	if channelid == "" || chaincodeName == "" || chaincodeVersion == "" || mspId == "" {
 		return nil, fmt.Errorf("channelid or ccname or ccver  or mspId is empty")
 	}
