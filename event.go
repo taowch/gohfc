@@ -36,6 +36,7 @@ type BlockEventResponse struct {
 	TxSize 			 int
 	TxID             string
 	TxHash           string
+	TxContent        []byte
 	TxCount 		 int
 	TxType 			 string
 	BlockConfirmTime int64
@@ -192,6 +193,7 @@ func DecodeEventBlock(pl []byte, blockNum uint64, idx int, metadata [][]byte, bl
 	response.TxHash = fmt.Sprintf("%x", hash)
 	response.TxSize = len(pl)
 	response.TxType = common.HeaderType_name[header.Type]
+	response.TxContent = pl
 	response.BlockConfirmTime = (response.BlockTime.UnixNano() - response.TxTime.UnixNano()) / 1000 / 1000
 	response.ChannelName = header.ChannelId
 	if ex.ChaincodeId != nil {
