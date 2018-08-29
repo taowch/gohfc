@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/fabtestorg/gohfc"
+	"github.com/peersafe/gohfc"
 	"github.com/spf13/viper"
 )
 
