@@ -17,6 +17,7 @@ import (
 	"time"
 	"fmt"
 	"golang.org/x/crypto/sha3"
+	"github.com/cendhu/fetch-block/src/events/parse"
 )
 
 const GRPC_MAX_SIZE = 100 * 1024 * 1024
@@ -111,7 +112,7 @@ func (e *eventHub) disconnect() {
 	e.connection.Close()
 }
 
-func newEventListener(ctx context.Context, response chan<- BlockEventResponse, crypto CryptoSuite, identity *Identity, mspId string, p *Peer) error {
+func newEventListener(ctx context.Context, response chan<- parse.Block, crypto CryptoSuite, identity *Identity, mspId string, p *Peer) error {
 	hub := new(eventHub)
 	err := hub.connect(ctx, p)
 	if err != nil {
@@ -125,7 +126,7 @@ func newEventListener(ctx context.Context, response chan<- BlockEventResponse, c
 	return nil
 }
 
-func (e *eventHub) readBlock(response chan<- BlockEventResponse) {
+func (e *eventHub) readBlock(response chan<- parse.Block) {
 	for {
 		in, err := e.client.Recv()
 		if err == io.EOF {
@@ -133,22 +134,15 @@ func (e *eventHub) readBlock(response chan<- BlockEventResponse) {
 			return
 		}
 		if err != nil {
-			response <- BlockEventResponse{Error: err}
+			response <- parse.Block{Error: err}
 			e.disconnect()
 			return
 		}
 
 		switch in.Event.(type) {
 		case *peer.Event_Block:
-			tmp, _ :=proto.Marshal(in)
-			meta := in.GetBlock().Metadata.Metadata
-			now := time.Now().UTC()
-			count := len(in.GetBlock().Data.Data)
-			size := len(tmp)
-			for i, bd := range in.GetBlock().Data.Data {
-				response <- DecodeEventBlock(bd, in.GetBlock().GetHeader().Number, i, meta, in.GetBlock().Header, now, count, size)
-			}
-
+			size := uint64((len(in.String())))
+			response <- parse.ParseBlock(in.GetBlock(), size)
 		}
 	}
 }

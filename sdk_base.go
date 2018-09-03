@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"github.com/cendhu/fetch-block/src/events/parse"
 )
 
 func QueryQscc(conf PeerConfig, cryptoFamily, pubkey, prikey, mspId, channeluuid string, args []string)(*QueryResponse, error) {
@@ -94,7 +95,7 @@ func Query(conf PeerConfig, cryptoFamily, pubkey, prikey, mspId, channeluuid, qu
 	return response, nil
 }
 
-func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey string) (chan BlockEventResponse, error) {
+func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey string) (chan parse.Block, error) {
 	peer, err := NewPeerFromConfig(conf)
 	if err != nil {
 		return nil, fmt.Errorf("NewPeerFromConfig err :", err)
@@ -146,7 +147,7 @@ func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey string) (
 		return nil, err
 	}
 
-	ch := make(chan BlockEventResponse)
+	ch := make(chan parse.Block)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	err = newEventListener(ctx, ch, crypto, identity, mspId, peer)

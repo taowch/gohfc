@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"github.com/cendhu/fetch-block/src/events/parse"
 )
 
 var sdklogger = logging.MustGetLogger("gohfc")
@@ -118,11 +119,11 @@ func (sdk *sdkHandler) QueryByQscc(args []string, peers []string) ([]*QueryRespo
 	return sdk.client.Query(sdk.identity, &chaincode, peers)
 }
 
-func (sdk *sdkHandler) ListenEvent(peername, mspid string) (chan BlockEventResponse, error) {
+func (sdk *sdkHandler) ListenEvent(peername, mspid string) (chan parse.Block, error) {
 	if peername == "" || mspid == "" {
 		return nil, fmt.Errorf("ListenEvent peername or mspid is empty ")
 	}
-	ch := make(chan BlockEventResponse)
+	ch := make(chan parse.Block)
 	ctx, cancel := context.WithCancel(context.Background())
 	err := sdk.client.Listen(ctx, sdk.identity, peername, mspid, ch)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/fabric/protos/peer"
 	"github.com/hyperledger/fabric/protos/orderer"
 	"context"
+	"github.com/cendhu/fetch-block/src/events/parse"
 )
 
 // FabricClient expose API's to work with Hyperledger Fabric
@@ -469,7 +470,7 @@ func (c *FabricClient) QueryTransaction(identity *Identity, channel *Channel, tx
 // events from other peers will be received. All Listen calls can share same channel.
 // In such scenarios every peer will send its own transactions from blocks. It is SDK user responsibility to
 // handle multiple identical events in same channel.
-func (c *FabricClient) Listen(ctx context.Context, identity *Identity, eventPeer, mspId string, response chan<- BlockEventResponse) (error) {
+func (c *FabricClient) Listen(ctx context.Context, identity *Identity, eventPeer, mspId string, response chan<- parse.Block) (error) {
 	ep, ok := c.EventPeers[eventPeer]
 	if !ok {
 		return ErrPeerNameNotFound
