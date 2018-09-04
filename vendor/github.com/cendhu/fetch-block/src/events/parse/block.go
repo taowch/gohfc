@@ -20,19 +20,24 @@ import (
 
 func deserializeIdentity(serializedID []byte) (*x509.Certificate, error) {
 	sId := &pbmsp.SerializedIdentity{}
+	fmt.Println("serializedID : ", serializedID)
 	err := proto.Unmarshal(serializedID, sId)
 	if err != nil {
+		fmt.Println("11111111111111111111")
 		return nil, fmt.Errorf("Could not deserialize a SerializedIdentity, err %s", err)
 	}
 
 	bl, _ := pem.Decode(sId.IdBytes)
 	if bl == nil {
+		fmt.Println("2222222222222222222222")
 		return nil, fmt.Errorf("Could not decode the PEM structure")
 	}
 	cert, err := x509.ParseCertificate(bl.Bytes)
 	if err != nil {
+		fmt.Println("3333333333333333333333")
 		return nil, fmt.Errorf("ParseCertificate failed %s", err)
 	}
+	fmt.Println("cert : ", cert)
 
 	return cert, nil
 }
@@ -63,10 +68,8 @@ func copyEndorsementToLocalEndorsement(localTransaction *Transaction, allEndorse
 	for _, endorser := range allEndorsements {
 		endorsement := &Endorsement{}
 		endorserSignatureHeader := &cb.SignatureHeader{}
-		if err := proto.Unmarshal(endorser.Endorser, endorserSignatureHeader); err != nil {
-			fmt.Printf("Error unmarshaling endorser signature: %s\n", err)
-		}
 
+		endorserSignatureHeader.Creator = endorser.Endorser
 		endorsement.SignatureHeader = getSignatureHeaderFromBlockData(endorserSignatureHeader)
 		endorsement.Signature = endorser.Signature
 		localTransaction.Endorsements = append(localTransaction.Endorsements, endorsement)
