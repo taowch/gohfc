@@ -14,7 +14,13 @@ type sdkHandler struct {
 	identity *Identity
 }
 
-var handler sdkHandler
+var (
+	handler         sdkHandler
+	orgPeerMap      = make(map[string][]string)
+	orderNames      []string
+	eventName       string
+	orRulePeerNames []string
+)
 
 func InitSDK(configPath string) error {
 	// initialize Fabric client
@@ -55,6 +61,13 @@ func InitSDK(configPath string) error {
 	}
 	handler.identity.MspId = handler.client.Channel.LocalMspId
 
+	if err := setLogLevel(); err != nil {
+		return fmt.Errorf("setLogLevel err: %s\n", err.Error())
+	}
+
+	if err := parsePolicy(); err != nil {
+		return fmt.Errorf("parsePolicy err: %s\n", err.Error())
+	}
 	return err
 }
 
@@ -64,26 +77,39 @@ func GetHandler() *sdkHandler {
 }
 
 // Invoke invoke cc
-func (sdk *sdkHandler) Invoke(args []string, peers []string, ordername string) (*InvokeResponse, error) {
+func (sdk *sdkHandler) Invoke(args []string) (*InvokeResponse, error) {
+	peerNames := getSendPeerName()
+	orderName := getSendOrderName()
+	if len(peerNames) == 0 || orderName == "" {
+		return nil, fmt.Errorf("config peer order is err")
+	}
 	chaincode, err := getChainCodeObj(args)
 	if err != nil {
 		return nil, err
 	}
-	return sdk.client.Invoke(*sdk.identity, *chaincode, peers, ordername)
+	return sdk.client.Invoke(*sdk.identity, *chaincode, peerNames, orderName)
 }
 
 // Query query cc
-func (sdk *sdkHandler) Query(args []string, peers []string) ([]*QueryResponse, error) {
+func (sdk *sdkHandler) Query(args []string) ([]*QueryResponse, error) {
+	peerNames := getSendPeerName()
+	if len(peerNames) == 0 {
+		return nil, fmt.Errorf("config peer order is err")
+	}
 	chaincode, err := getChainCodeObj(args)
 	if err != nil {
 		return nil, err
 	}
 
-	return sdk.client.Query(*sdk.identity, *chaincode, peers)
+	return sdk.client.Query(*sdk.identity, *chaincode, []string{peerNames[0]})
 }
 
 // Query query qscc
-func (sdk *sdkHandler) QueryByQscc(args []string, peers []string) ([]*QueryResponse, error) {
+func (sdk *sdkHandler) QueryByQscc(args []string) ([]*QueryResponse, error) {
+	peerNames := getSendPeerName()
+	if len(peerNames) == 0 {
+		return nil, fmt.Errorf("config peer order is err")
+	}
 	channelid := handler.client.Channel.ChannelId
 	mspId := handler.client.Channel.LocalMspId
 	if channelid == "" || mspId == "" {
@@ -97,16 +123,16 @@ func (sdk *sdkHandler) QueryByQscc(args []string, peers []string) ([]*QueryRespo
 		Args:      args,
 	}
 
-	return sdk.client.Query(*sdk.identity, chaincode, peers)
+	return sdk.client.Query(*sdk.identity, chaincode, []string{peerNames[0]})
 }
 
-func (sdk *sdkHandler) ListenEventFullBlock(peername, channelid string) (chan EventBlockResponse, error) {
-	if peername == "" || channelid == "" {
-		return nil, fmt.Errorf("ListenEventFullBlock peername or channelid is empty ")
+func (sdk *sdkHandler) ListenEventFullBlock(channelid string) (chan EventBlockResponse, error) {
+	if channelid == "" {
+		return nil, fmt.Errorf("ListenEventFullBlock channelid is empty ")
 	}
 	ch := make(chan EventBlockResponse)
 	ctx, cancel := context.WithCancel(context.Background())
-	err := sdk.client.ListenForFullBlock(ctx, *sdk.identity, peername, channelid, ch)
+	err := sdk.client.ListenForFullBlock(ctx, *sdk.identity, eventName, channelid, ch)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -118,13 +144,13 @@ func (sdk *sdkHandler) ListenEventFullBlock(peername, channelid string) (chan Ev
 	return ch, nil
 }
 
-func (sdk *sdkHandler) ListenEventFilterBlock(peername, channelid string) (chan EventBlockResponse, error) {
-	if peername == "" || channelid == "" {
-		return nil, fmt.Errorf("ListenEventFilterBlock peername or channelid is empty ")
+func (sdk *sdkHandler) ListenEventFilterBlock(channelid string) (chan EventBlockResponse, error) {
+	if channelid == "" {
+		return nil, fmt.Errorf("ListenEventFilterBlock  channelid is empty ")
 	}
 	ch := make(chan EventBlockResponse)
 	ctx, cancel := context.WithCancel(context.Background())
-	err := sdk.client.ListenForFilteredBlock(ctx, *sdk.identity, peername, channelid, ch)
+	err := sdk.client.ListenForFilteredBlock(ctx, *sdk.identity, eventName, channelid, ch)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -134,24 +160,4 @@ func (sdk *sdkHandler) ListenEventFilterBlock(peername, channelid string) (chan 
 	//	fmt.Println(d)
 	//}
 	return ch, nil
-}
-
-func getChainCodeObj(args []string) (*ChainCode, error) {
-	channelid := handler.client.Channel.ChannelId
-	chaincodeName := handler.client.Channel.ChaincodeName
-	chaincodeVersion := handler.client.Channel.ChaincodeVersion
-	mspId := handler.client.Channel.LocalMspId
-	if channelid == "" || chaincodeName == "" || chaincodeVersion == "" || mspId == "" {
-		return nil, fmt.Errorf("channelid or ccname or ccver  or mspId is empty")
-	}
-
-	chaincode := ChainCode{
-		ChannelId: channelid,
-		Type:      ChaincodeSpec_GOLANG,
-		Name:      chaincodeName,
-		Version:   chaincodeVersion,
-		Args:      args,
-	}
-
-	return &chaincode, nil
 }

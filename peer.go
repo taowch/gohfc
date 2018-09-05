@@ -5,24 +5,25 @@ License: Apache License Version 2.0
 package gohfc
 
 import (
-	"google.golang.org/grpc"
-	"github.com/hyperledger/fabric/protos/peer"
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/protos/peer"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"time"
 	"google.golang.org/grpc/keepalive"
+	"time"
 )
 
 // Peer expose API's to communicate with peer
 type Peer struct {
-	Name   string
-	Uri    string
-	MspId  string
-	Opts   []grpc.DialOption
-	caPath string
-	conn   *grpc.ClientConn
-	client peer.EndorserClient
+	Name    string
+	OrgName string
+	Uri     string
+	MspId   string
+	Opts    []grpc.DialOption
+	caPath  string
+	conn    *grpc.ClientConn
+	client  peer.EndorserClient
 }
 
 // PeerResponse is response from peer transaction request

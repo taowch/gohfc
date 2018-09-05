@@ -18,6 +18,7 @@ type ClientConfig struct {
 	EventPeers    map[string]PeerConfig    `yaml:"eventPeers"`
 	ChannelConfig `yaml:"channel"`
 	Mq            `yaml:"mq"`
+	Log            `yaml:"log"`
 }
 
 type ChannelConfig struct {
@@ -37,6 +38,11 @@ type ChaincodePolicy struct {
 type Mq struct {
 	MqAddress []string `yaml:"mqAddress"`
 	QueueName string   `yaml:"queueName"`
+}
+
+type Log struct {
+	LogLevel     string `yaml:"logLevel"`
+	LogModelName string `yaml:"logModelName"`
 }
 
 // CAConfig holds config for Fabric CA

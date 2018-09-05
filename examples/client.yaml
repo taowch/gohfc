@@ -15,23 +15,28 @@ orderers:
 peers:
   peer01:
     host: peer0.example.com:7051
+    orgName: org1
     useTLS: false
     tlsPath: /path/to/tls/server.pem
   peer11:
     host: peer1.example.com:8051
+    orgName: org1
     useTLS: false
     tlsPath: /path/to/tls/server.pem
   peer02:
     host: peer0.example.com:9051
+    orgName: org1
     useTLS: false
     tlsPath: /path/to/tls/server.pem
   peer12:
     host: peer1.example.com:10051
+    orgName: org1
     useTLS: false
     tlsPath: /path/to/tls/server.pem
 eventPeers:
   peer0:
     host: peer0.example.com:7051
+    orgName: org1
     useTLS: false
     tlsPath: /path/to/tls/server.pem
 channel:
@@ -50,3 +55,6 @@ mq:
 #      - "amqp://xn:123456@10.10.255.103:5672/"
       - "amqp://guest:guest@localhost:5672/"
     queueName: "assetQueue"
+log:
+    logLevel: DEBUG
+    logModelName: apiserver
