@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/CognitionFoundry/gohfc"
+	"github.com/peersafe/gohfc"
 	"os"
 
 	"math/rand"
@@ -13,7 +13,6 @@ const ADM_PK = "/path/to/admin/cert.pem"
 const ADM_SK = "/path/to/admin/admin.key"
 
 func main() {
-
 	// initialize Fabric client
 	c, err := gohfc.NewFabricClient("./client.yaml")
 	if err != nil {

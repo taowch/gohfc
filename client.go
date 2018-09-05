@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/hyperledger/fabric/protos/orderer"
 	"github.com/hyperledger/fabric/protos/peer"
+	"github.com/peersafe/gohfc/parseBlock"
 )
 
 // FabricClient expose API's to work with Hyperledger Fabric
@@ -493,7 +494,7 @@ func (c *FabricClient) QueryTransaction(identity Identity, channelId string, txI
 // To cancel listening provide context with cancellation option and call cancel.
 // User can listen for same events in same channel in multiple peers for redundancy using same `chan<- EventBlockResponse`
 // In this case every peer will send its events, so identical events may appear more than once in channel.
-func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity, eventPeer, channelId string, response chan<- EventBlockResponse) error {
+func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity, eventPeer, channelId string, response chan<- parseBlock.Block) error {
 	ep, ok := c.EventPeers[eventPeer]
 	if !ok {
 		return ErrPeerNameNotFound
@@ -506,7 +507,7 @@ func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity
 	if err != nil {
 		return err
 	}
-	listener.Listen(response)
+	listener.Listen(response, nil)
 	return nil
 }
 
@@ -526,7 +527,7 @@ func (c *FabricClient) ListenForFilteredBlock(ctx context.Context, identity Iden
 	if err != nil {
 		return err
 	}
-	listener.Listen(response)
+	listener.Listen(nil, response)
 	return nil
 }
 

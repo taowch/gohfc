@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"github.com/peersafe/gohfc/parseBlock"
 )
 
 //sdk handler
@@ -126,11 +127,11 @@ func (sdk *sdkHandler) QueryByQscc(args []string) ([]*QueryResponse, error) {
 	return sdk.client.Query(*sdk.identity, chaincode, []string{peerNames[0]})
 }
 
-func (sdk *sdkHandler) ListenEventFullBlock(channelid string) (chan EventBlockResponse, error) {
+func (sdk *sdkHandler) ListenEventFullBlock(channelid string) (chan parseBlock.Block, error) {
 	if channelid == "" {
 		return nil, fmt.Errorf("ListenEventFullBlock channelid is empty ")
 	}
-	ch := make(chan EventBlockResponse)
+	ch := make(chan parseBlock.Block)
 	ctx, cancel := context.WithCancel(context.Background())
 	err := sdk.client.ListenForFullBlock(ctx, *sdk.identity, eventName, channelid, ch)
 	if err != nil {
