@@ -6,15 +6,16 @@ package gohfc
 
 import (
 	"context"
-	"google.golang.org/grpc"
-	"time"
 	"fmt"
-	"github.com/hyperledger/fabric/protos/orderer"
-	"math"
-	"github.com/hyperledger/fabric/protos/common"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/hyperledger/fabric/protos/common"
+	"github.com/hyperledger/fabric/protos/orderer"
 	"github.com/hyperledger/fabric/protos/peer"
+	"github.com/peersafe/gohfc/parseBlock"
+	"google.golang.org/grpc"
+	"math"
+	"time"
 )
 
 const (
@@ -72,8 +73,6 @@ type EventBlockResponseTransactionEvent struct {
 }
 
 func (e *EventListener) newConnection() error {
-
-
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -151,25 +150,26 @@ func (e *EventListener) SeekRange(start, end uint64) error {
 	return e.client.Send(seek)
 }
 
-func (e *EventListener) Listen(response chan<- EventBlockResponse) {
+func (e *EventListener) Listen(response chan<- parseBlock.Block, filterResponse chan<- EventBlockResponse) {
 	go func() {
 		for {
 			msg, err := e.client.Recv()
 			if err != nil {
-				response <- EventBlockResponse{Error: fmt.Errorf("error receiving data:%v", err)}
+				response <- parseBlock.Block{Error: err}
 				return
 			}
+			size := uint64(len(msg.String()))
 			switch t := msg.Type.(type) {
 			case *peer.DeliverResponse_Block:
-				response <- *e.parseFullBlock(t, e.FullBlock)
+				response <- parseBlock.ParseBlock(msg.GetBlock(), size)
 			case *peer.DeliverResponse_FilteredBlock:
-				response <- *e.parseFilteredBlock(t, e.FullBlock)
+				filterResponse <- *e.parseFilteredBlock(t, e.FullBlock)
 			}
 		}
 	}()
 }
 
-func (e *EventListener) parseFilteredBlock(block *peer.DeliverResponse_FilteredBlock, fullBlock bool) (*EventBlockResponse) {
+func (e *EventListener) parseFilteredBlock(block *peer.DeliverResponse_FilteredBlock, fullBlock bool) *EventBlockResponse {
 
 	response := &EventBlockResponse{
 		ChannelId:    block.FilteredBlock.ChannelId,
@@ -214,7 +214,7 @@ func (e *EventListener) parseFilteredBlock(block *peer.DeliverResponse_FilteredB
 	return response
 }
 
-func (e *EventListener) parseFullBlock(block *peer.DeliverResponse_Block, fullBlock bool) (*EventBlockResponse) {
+func (e *EventListener) parseFullBlock(block *peer.DeliverResponse_Block, fullBlock bool) *EventBlockResponse {
 
 	response := &EventBlockResponse{
 		BlockHeight: block.Block.Header.Number,
