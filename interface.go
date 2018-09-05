@@ -77,6 +77,13 @@ func GetHandler() *sdkHandler {
 	return &handler
 }
 
+func GetClient() *FabricClient{
+	return handler.client
+}
+func GetIdentity() *Identity{
+	return handler.identity
+}
+
 // Invoke invoke cc
 func (sdk *sdkHandler) Invoke(args []string) (*InvokeResponse, error) {
 	peerNames := getSendPeerName()
