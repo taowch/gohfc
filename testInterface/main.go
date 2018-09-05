@@ -45,7 +45,7 @@ func main() {
 		}
 		logger.Debugf("----query--result--%s\n",resVal[0].Response.Response.GetPayload())
 	case "listen":
-		ch, err := gohfc.GetHandler().ListenEventFullBlock("mychannel")
+		ch, err := gohfc.GetHandler().ListenEventFullBlock()
 		if err != nil {
 			logger.Error(err)
 			return

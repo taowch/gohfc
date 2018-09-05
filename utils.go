@@ -42,6 +42,7 @@ func setLogLevel() error {
 	if err != nil {
 		return err
 	}
+	logging.SetBackend(backendFormatter).SetLevel(logLevel, "gohfc")
 	//map[k]v; eg:  var logger = logging.MustGetLogger("event")
 	logging.SetBackend(backendFormatter).SetLevel(logLevel, modelName)
 	return nil
