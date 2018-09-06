@@ -6,7 +6,8 @@ package gohfc
 
 import (
 	"crypto/ecdsa"
-	"crypto/x509"
+	//"crypto/x509"
+	x509 "github.com/peersafe/gm-crypto/sm2"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -29,8 +30,8 @@ func MarshalIdentity(i *Identity) (string, error) {
 	var pk, cert string
 	switch i.PrivateKey.(type) {
 	case *ecdsa.PrivateKey:
-		cast := i.PrivateKey.(*ecdsa.PrivateKey)
-		b, err := x509.MarshalECPrivateKey(cast)
+		cast := i.PrivateKey.(*x509.PrivateKey)
+		b, err := x509.MarshalSm2PrivateKey(cast, nil)
 		if err != nil {
 			return "", err
 		}
@@ -83,7 +84,7 @@ func UnmarshalIdentity(data string) (*Identity, error) {
 	var pk interface{}
 	switch keyPem.Type {
 	case "EC PRIVATE KEY":
-		pk, err = x509.ParseECPrivateKey(keyPem.Bytes)
+		pk, err = x509.ParseSm2PrivateKey(keyPem.Bytes)
 		if err != nil {
 			return nil, ErrInvalidDataForParcelIdentity
 		}
@@ -113,9 +114,10 @@ func LoadCertFromFile(pk, sk string) (*Identity, error) {
 		return nil, err
 	}
 
-	key, err := x509.ParsePKCS8PrivateKey(kpb.Bytes)
+	key, err := x509.ParsePKCS8UnecryptedPrivateKey(kpb.Bytes)
 	if err != nil {
 		return nil, err
 	}
+
 	return &Identity{Certificate: crt, PrivateKey: key}, nil
 }

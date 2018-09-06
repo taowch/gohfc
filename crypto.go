@@ -5,18 +5,20 @@ License: Apache License Version 2.0
 package gohfc
 
 import (
-	"crypto/ecdsa"
+	//"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
-	"crypto/x509"
+	//"crypto/x509"
+	x509 "github.com/peersafe/gm-crypto/sm2"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
 	"golang.org/x/crypto/sha3"
 	"hash"
 	"math/big"
+	"github.com/tjfoc/gmsm/sm3"
 )
 
 // CryptSuite defines common interface for different crypto implementations.
@@ -46,7 +48,7 @@ var (
 type ECCryptSuite struct {
 	curve        elliptic.Curve
 	sigAlgorithm x509.SignatureAlgorithm
-	key          *ecdsa.PrivateKey
+	key          *x509.PrivateKey
 	hashFunction func() hash.Hash
 }
 
@@ -55,7 +57,7 @@ type eCDSASignature struct {
 }
 
 func (c *ECCryptSuite) GenerateKey() (interface{}, error) {
-	key, err := ecdsa.GenerateKey(c.curve, rand.Reader)
+	key, err := x509.GenerateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -83,29 +85,20 @@ func (c *ECCryptSuite) CreateCertificateRequest(enrolmentId string, key interfac
 }
 
 func (c *ECCryptSuite) Sign(msg []byte, k interface{}) ([]byte, error) {
-	key, ok := k.(*ecdsa.PrivateKey)
+	key, ok := k.(*x509.PrivateKey)
 	if !ok {
 		return nil, ErrInvalidKeyType
 	}
 	var h []byte
 	h = c.Hash(msg)
-	R, S, err := ecdsa.Sign(rand.Reader, key, h)
-	if err != nil {
-		return nil, err
-	}
-	c.preventMalleability(key, S)
-	sig, err := asn1.Marshal(eCDSASignature{R, S})
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
+	return key.Sign(nil, h, nil)
 }
 
 // ECDSA signature can be "exploited" using symmetry of S values.
 // Fabric (by convention) accepts only signatures with low-S values
 // If result of a signature is high-S value we have to subtract S from curve.N
 // For more details https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
-func (c *ECCryptSuite) preventMalleability(k *ecdsa.PrivateKey, S *big.Int) {
+func (c *ECCryptSuite) preventMalleability(k *x509.PrivateKey, S *big.Int) {
 	halfOrder := ecCurveHalfOrders[k.Curve]
 	if S.Cmp(halfOrder) == 1 {
 		S.Sub(k.Params().N, S)
@@ -128,6 +121,8 @@ func NewECCryptSuiteFromConfig(config CryptoConfig) (CryptoSuite, error) {
 		suite = &ECCryptSuite{curve: elliptic.P384(), sigAlgorithm: x509.ECDSAWithSHA384}
 	case "P521-SHA512":
 		suite = &ECCryptSuite{curve: elliptic.P521(), sigAlgorithm: x509.ECDSAWithSHA512}
+	case "SM2-SM3":
+		suite = &ECCryptSuite{curve: x509.P256Sm2(), sigAlgorithm: x509.SM2WithSM3}
 	default:
 		return nil, ErrInvalidAlgorithm
 	}
@@ -142,8 +137,13 @@ func NewECCryptSuiteFromConfig(config CryptoConfig) (CryptoSuite, error) {
 		suite.hashFunction = sha3.New256
 	case "SHA3-384":
 		suite.hashFunction = sha3.New384
+	case "SM3":
+		suite.hashFunction = sm3.New
 	default:
 		return nil, ErrInvalidHash
 	}
+
+
+
 	return suite, nil
 }

@@ -1,51 +1,50 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/protos/common"
 	"github.com/peersafe/gohfc"
-	"github.com/spf13/viper"
+	"strconv"
 )
 
 func main() {
-	flag.Parse()
-	args := flag.Args()
-	if err := gohfc.InitSDK("./client.yaml"); err != nil {
-		fmt.Println(err)
+	conf := gohfc.PeerConfig{
+		Host:     "peer1.org1.hbhafifc.com:7051",
+		Insecure: false,
+		TlsPath:  "/opt/gopath/src/github.com/peersafe/bcap/build/install/networklist/hbhafifc/crypto-config/peerOrganizations/org1.hbhafifc/peers/peer1.org1.hbhafifc.com/tls/server.crt",
+		OrgName:  "org1.hbhafifc",
+	}
+	cryptoFamily := "sm2"
+	pubkey := "/opt/gopath/src/github.com/peersafe/bcap/build/install/networklist/hbhafifc/crypto-config/peerOrganizations/org1.hbhafifc/peers/peer1.org1.hbhafifc.com/msp/signcerts"
+	prikey := "/opt/gopath/src/github.com/peersafe/bcap/build/install/networklist/hbhafifc/crypto-config/peerOrganizations/org1.hbhafifc/peers/peer1.org1.hbhafifc.com/msp/keystore"
+	mspId := "org1MSPhbhafifc"
+	chainId := "channelpooxlrsv"
+	blockNum := uint64(0)
+
+	if _, err := GetBlockByNumber(conf, cryptoFamily, pubkey, prikey, mspId, chainId, blockNum); err != nil {
+		fmt.Println("GetBlockByNumber err : ", err)
 		return
 	}
-	//args := []string{"invoke", "a", "b", "20"}
-	peers := []string{"peer0"}
-	if args[0] == "invoke" {
-		result, err := gohfc.GetHandler().Invoke(args, peers, "orderer0")
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(result)
-	} else if args[0] == "query" {
-		result, err := gohfc.GetHandler().Query(args, peers)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(string(result[0].Response.Response.GetPayload()))
-	} else if args[0] == "listen" {
-		ch, err := gohfc.GetHandler().ListenEvent("peer0", viper.GetString("other.localMspId"))
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for {
-			select {
-			case v := <-ch:
-				fmt.Println(v)
-			}
-		}
-	} else {
-		result, err := gohfc.GetHandler().QueryByQscc(args, peers)
-		if err != nil {
-			fmt.Println(err)
-		}
+	fmt.Println("success")
+}
 
-		fmt.Println(string(result[0].Response.Response.GetPayload()))
+func GetBlockByNumber(conf gohfc.PeerConfig, cryptoFamily, pubkey, prikey, mspId, chainId string, blockNum uint64) (*common.Block, error) {
+	strBlockNum := strconv.FormatUint(blockNum, 10)
+	args := []string{"GetBlockByNumber", chainId, strBlockNum}
+	resps, err := gohfc.QueryQscc(conf, cryptoFamily, pubkey, prikey, mspId, chainId, args)
+	if err != nil {
+		return nil, fmt.Errorf("can not get installed chaincodes :%s", err.Error())
 	}
+	if resps.Error != nil {
+		return nil, resps.Error
+	}
+	data := resps.Response.Response.Payload
+	var block = new(common.Block)
+	err = proto.Unmarshal(data, block)
+	if err != nil {
+		return nil, fmt.Errorf("GetBlockByNumber Unmarshal from payload failed: %s", err.Error())
+	}
+
+	return block, nil
 }

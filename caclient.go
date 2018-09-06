@@ -8,7 +8,8 @@ package gohfc
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
+	//"crypto/x509"
+	x509 "github.com/peersafe/gm-crypto/sm2"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"

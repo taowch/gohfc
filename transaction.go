@@ -9,12 +9,12 @@ import (
 	"github.com/hyperledger/fabric/protos/msp"
 	"encoding/pem"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/golang/protobuf/ptypes"
 	"time"
 	"github.com/hyperledger/fabric/protos/peer"
+	"github.com/peersafe/gm-crypto/sm3"
 	"bytes"
 )
 
@@ -142,7 +142,7 @@ func generateRandomBytes(len int) ([]byte, error) {
 
 // sha256 is hardcoded in hyperledger
 func generateTxId(nonce, creator []byte) string {
-	f := sha256.New()
+	f := sm3.New()
 	f.Write(append(nonce, creator...))
 	return hex.EncodeToString(f.Sum(nil))
 }

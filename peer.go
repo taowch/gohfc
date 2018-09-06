@@ -8,9 +8,10 @@ import (
 	"google.golang.org/grpc"
 	"github.com/hyperledger/fabric/protos/peer"
 	"context"
-	"fmt"
-	"google.golang.org/grpc/credentials"
+	credentials "github.com/peersafe/gm-crypto/gmtls/gmcredentials"
+	//"google.golang.org/grpc/credentials"
 	"time"
+	"strings"
 )
 
 // Peer expose API's to communicate with peer
@@ -56,9 +57,11 @@ func NewPeerFromConfig(conf PeerConfig) (*Peer,error) {
 	if conf.Insecure {
 		p.Opts = []grpc.DialOption{grpc.WithInsecure()}
 	} else if p.caPath != "" {
-		creds, err := credentials.NewClientTLSFromFile(p.caPath, "")
+		index := strings.Index(p.Uri, ":")
+		serverNameOverride := p.Uri[:index]
+		creds, err := credentials.NewClientTLSFromFile(p.caPath, serverNameOverride)
 		if err != nil {
-			return nil, fmt.Errorf("cannot read peer %s credentials err is: %v", p.Name, err)
+			return nil, err
 		}
 		p.Opts = append(p.Opts, grpc.WithTransportCredentials(creds))
 	}

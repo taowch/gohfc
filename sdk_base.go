@@ -31,6 +31,17 @@ func Query(conf PeerConfig, cryptoFamily, pubkey, prikey, mspId, channeluuid, qu
 		if err != nil {
 			return nil, err
 		}
+	case "sm2":
+		cryptoConfig := CryptoConfig{
+			Family:cryptoFamily,
+			Algorithm:"SM2-SM3",
+			Hash:"SM3",
+		}
+
+		crypto, err = NewECCryptSuiteFromConfig(cryptoConfig)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, ErrInvalidAlgorithmFamily
 	}
@@ -108,6 +119,17 @@ func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey string) (
 			Family:cryptoFamily,
 			Algorithm:"P256-SHA256",
 			Hash:"SHA2-256",
+		}
+
+		crypto, err = NewECCryptSuiteFromConfig(cryptoConfig)
+		if err != nil {
+			return nil, err
+		}
+	case "sm2":
+		cryptoConfig := CryptoConfig{
+			Family:cryptoFamily,
+			Algorithm:"SM2-SM3",
+			Hash:"SM3",
 		}
 
 		crypto, err = NewECCryptSuiteFromConfig(cryptoConfig)
