@@ -104,26 +104,32 @@ func (w *WisHandler) Init() error {
 
 	logging.SetBackend(backendFormatter).SetLevel(logging.DEBUG, "main")
 
+	fabricClient :=  &FabricClient{}
+	w.FaCli = fabricClient
+
 	pubkey := findCurt(w.Pubkeys)
 	prikey := findCurt(w.Prikeys)
 
 	identity, err := LoadCertFromFile(pubkey, prikey)
 	if err != nil {
-		wis_logger.Panic("LoadCertFromFile err = ", err)
+		wis_logger.Error("LoadCertFromFile err = ", err)
 		return err
 	}
+	identity.MspId = w.Mspids
 	w.Ide = identity
 
-	if "" == w.PeerName {
-		return fmt.Errorf("Query Peer is empty !!!!!!")
+	if "" != w.PeerName {
+		peers := make(map[string]*Peer)
+		peer, err := NewPeerFromConfig(w.PeerConf)
+		if err != nil {
+			return fmt.Errorf("Peer NewPeerFromConfig err :", err)
+		}
+		peers[w.PeerName] = peer
+		w.FaCli.Peers = peers
+	} else {
+		wis_logger.Debug("This PeerName is empty!!!!")
 	}
-	peers := make(map[string]*Peer)
-	peer, err := NewPeerFromConfig(w.PeerConf)
-	if err != nil {
-		return fmt.Errorf("Peer NewPeerFromConfig err :", err)
-	}
-	peers[w.PeerName] = peer
-	w.FaCli.Peers = peers
+
 
 	if "" != w.OrderName {
 		orderers := make(map[string]*Orderer)
