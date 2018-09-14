@@ -3,12 +3,14 @@ package gohfc
 import (
 	"context"
 	"fmt"
+	"github.com/cendhu/fetch-block/src/events/parse"
+	"github.com/hyperledger/fabric/gotools/build/gopath/src/github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/protos/common"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"github.com/cendhu/fetch-block/src/events/parse"
 )
 
 var sdklogger = logging.MustGetLogger("gohfc")
@@ -95,6 +97,33 @@ func (sdk *sdkHandler) Query(args []string, peers []string) ([]*QueryResponse, e
 	}
 
 	return sdk.client.Query(sdk.identity, chaincode, peers)
+}
+
+func (sdk *sdkHandler) GetBlockHeight(peers []string) (uint64, error) {
+	channelid := viper.GetString("other.channelId")
+	if channelid == "" {
+		return 0, fmt.Errorf("channelid  is empty")
+	}
+	args := []string{"GetChainInfo", channelid}
+	sdklogger.Debugf("GetBlockHeight chainId %s", channelid)
+	resps, err := sdk.QueryByQscc(args, peers)
+	if err != nil {
+		return 0, err
+	} else if len(resps) == 0 {
+		return 0, fmt.Errorf("GetChainInfo is empty respons from peer qscc")
+	}
+
+	if resps[0].Error != nil {
+		return 0, resps[0].Error
+	}
+
+	data := resps[0].Response.Response.Payload
+	var chainInfo = new(common.BlockchainInfo)
+	err = proto.Unmarshal(data, chainInfo)
+	if err != nil {
+		return 0, fmt.Errorf("GetChainInfo unmarshal from payload failed: %s", err.Error())
+	}
+	return chainInfo.Height, nil
 }
 
 // Query query qscc
