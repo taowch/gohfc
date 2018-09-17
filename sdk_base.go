@@ -80,6 +80,8 @@ func Query(conf PeerConfig, cryptoFamily, pubkey, prikey, mspId, channeluuid, qu
 		return nil, err
 	}
 
+	identity.MspId = mspId
+
 	prop, err := createTransactionProposal(*identity, *chaincode)
 	if err != nil {
 		return nil, err
@@ -99,7 +101,7 @@ func Query(conf PeerConfig, cryptoFamily, pubkey, prikey, mspId, channeluuid, qu
 	return response, nil
 }
 
-func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey string) (chan parseBlock.Block, error) {
+func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey, channel string) (chan parseBlock.Block, error) {
 	ch := make(chan parseBlock.Block)
 
 	handler := &WisHandler{
@@ -109,6 +111,7 @@ func  ListenEvent(conf PeerConfig, mspId, cryptoFamily, pubkey, prikey string) (
 		EventPeer:conf.Host,
 		Pubkeys:pubkey,
 		Prikeys:prikey,
+		Channeluuids:channel,
 	}
 
 	err := handler.ListenForFullBlock(ch)
