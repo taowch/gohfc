@@ -20,6 +20,7 @@ func main() {
 		logger.Error(err)
 		return
 	}
+	logger.Debugf("--testInterface main--")
 
 	switch *funcName {
 	case "invoke":
