@@ -541,6 +541,11 @@ func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
 		if err != nil {
 			return nil, err
 		}
+	case "gm":
+		crypto, err = NewECCryptSuiteFromConfig(config.CryptoConfig)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, ErrInvalidAlgorithmFamily
 	}

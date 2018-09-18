@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/sm3"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -32,6 +33,7 @@ type CryptoSuite interface {
 	Sign(msg []byte, key interface{}) ([]byte, error)
 	// Hash computes Hash value of provided data. Hash function will be different in different crypto implementations.
 	Hash(data []byte) []byte
+	GetFamily() string
 }
 
 var (
@@ -50,6 +52,7 @@ type ECCryptSuite struct {
 	sigAlgorithm x509.SignatureAlgorithm
 	key          *ecdsa.PrivateKey
 	hashFunction func() hash.Hash
+	family       string
 }
 
 type eCDSASignature struct {
@@ -132,6 +135,9 @@ func (c *ECCryptSuite) Sign(msg []byte, k interface{}) ([]byte, error) {
 // If result of a signature is high-S value we have to subtract S from curve.N
 // For more details https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
 func (c *ECCryptSuite) preventMalleability(k *ecdsa.PrivateKey, S *big.Int) {
+	if k.Curve == elliptic.P256SM2() {
+		return
+	}
 	halfOrder := ecCurveHalfOrders[k.Curve]
 	if S.Cmp(halfOrder) == 1 {
 		S.Sub(k.Params().N, S)
@@ -144,6 +150,10 @@ func (c *ECCryptSuite) Hash(data []byte) []byte {
 	return h.Sum(nil)
 }
 
+func (c *ECCryptSuite) GetFamily() string {
+	return c.family
+}
+
 // NewECCryptSuite creates new Elliptic curve crypto suite from config
 func NewECCryptSuiteFromConfig(config CryptoConfig) (CryptoSuite, error) {
 	var suite *ECCryptSuite
@@ -154,12 +164,13 @@ func NewECCryptSuiteFromConfig(config CryptoConfig) (CryptoSuite, error) {
 		suite = &ECCryptSuite{curve: elliptic.P384(), sigAlgorithm: x509.ECDSAWithSHA384}
 	case "P521-SHA512":
 		suite = &ECCryptSuite{curve: elliptic.P521(), sigAlgorithm: x509.ECDSAWithSHA512}
+	case "P256SM2":
+		suite = &ECCryptSuite{curve: elliptic.P256SM2(), sigAlgorithm: x509.ECDSAWithSHA256}
 	default:
 		return nil, ErrInvalidAlgorithm
 	}
 
 	switch config.Hash {
-
 	case "SHA2-256":
 		suite.hashFunction = sha256.New
 	case "SHA2-384":
@@ -168,8 +179,11 @@ func NewECCryptSuiteFromConfig(config CryptoConfig) (CryptoSuite, error) {
 		suite.hashFunction = sha3.New256
 	case "SHA3-384":
 		suite.hashFunction = sha3.New384
+	case "SM3":
+		suite.hashFunction = sm3.New
 	default:
 		return nil, ErrInvalidHash
 	}
+	suite.family = config.Family
 	return suite, nil
 }

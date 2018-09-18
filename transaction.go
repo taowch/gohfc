@@ -16,6 +16,8 @@ import (
 	"time"
 	"github.com/hyperledger/fabric/protos/peer"
 	"bytes"
+	"strings"
+	"crypto/sm3"
 )
 
 // TransactionId represents transaction identifier. TransactionId is the unique transaction number.
@@ -146,6 +148,9 @@ func generateRandomBytes(len int) ([]byte, error) {
 // sha256 is hardcoded in hyperledger
 func generateTxId(nonce, creator []byte) string {
 	f := sha256.New()
+	if strings.ToUpper(handler.client.Crypto.GetFamily()) == "GM" {
+		f = sm3.New()
+	}
 	f.Write(append(nonce, creator...))
 	return hex.EncodeToString(f.Sum(nil))
 }
