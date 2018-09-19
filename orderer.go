@@ -116,7 +116,7 @@ func (o *Orderer) getGenesisBlock(identity Identity, crypto CryptoSuite, channel
 	if err != nil {
 		return nil, err
 	}
-	txId, err := newTransactionId(creator)
+	txId, err := newTransactionId(creator, crypto)
 	if err != nil {
 		return nil, err
 	}

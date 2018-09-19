@@ -9,15 +9,12 @@ import (
 	"github.com/hyperledger/fabric/protos/msp"
 	"encoding/pem"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/golang/protobuf/ptypes"
 	"time"
 	"github.com/hyperledger/fabric/protos/peer"
 	"bytes"
-	"strings"
-	"crypto/sm3"
 )
 
 // TransactionId represents transaction identifier. TransactionId is the unique transaction number.
@@ -126,12 +123,12 @@ func payload(header *common.Header, data []byte) ([]byte, error) {
 }
 
 // newTransactionId generate new transaction id from creator and random bytes
-func newTransactionId(creator []byte) (*TransactionId, error) {
+func newTransactionId(creator []byte, crypto CryptoSuite) (*TransactionId, error) {
 	nonce, err := generateRandomBytes(24)
 	if err != nil {
 		return nil, err
 	}
-	id := generateTxId(nonce, creator)
+	id := generateTxId(nonce, creator, crypto)
 	return &TransactionId{Creator: creator, Nonce: nonce, TransactionId: id}, nil
 }
 
@@ -146,13 +143,8 @@ func generateRandomBytes(len int) ([]byte, error) {
 }
 
 // sha256 is hardcoded in hyperledger
-func generateTxId(nonce, creator []byte) string {
-	f := sha256.New()
-	if strings.ToUpper(handler.client.Crypto.GetFamily()) == "GM" {
-		f = sm3.New()
-	}
-	f.Write(append(nonce, creator...))
-	return hex.EncodeToString(f.Sum(nil))
+func generateTxId(nonce, creator []byte, crypto CryptoSuite) string {
+	return hex.EncodeToString(crypto.Hash(append(nonce, creator...)))
 }
 
 func chainCodeInvocationSpec(chainCode ChainCode) ([]byte, error) {
@@ -208,7 +200,7 @@ func sendToPeers(peers []*Peer, prop *peer.SignedProposal) []*PeerResponse {
 	return resp
 }
 
-func createTransactionProposal(identity Identity, cc ChainCode) (*transactionProposal, error) {
+func createTransactionProposal(identity Identity, cc ChainCode, crypto CryptoSuite) (*transactionProposal, error) {
 	spec, err := chainCodeInvocationSpec(cc)
 	if err != nil {
 		return nil, err
@@ -217,7 +209,7 @@ func createTransactionProposal(identity Identity, cc ChainCode) (*transactionPro
 	if err != nil {
 		return nil, err
 	}
-	txId, err := newTransactionId(creator)
+	txId, err := newTransactionId(creator, crypto)
 	if err != nil {
 		return nil, err
 	}

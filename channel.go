@@ -58,7 +58,7 @@ func buildAndSignChannelConfig(identity Identity, configPayload []byte, crypto C
 	if err != nil {
 		return nil, err
 	}
-	txId, err := newTransactionId(creator)
+	txId, err := newTransactionId(creator, crypto)
 	if err != nil {
 		return nil, err
 	}
