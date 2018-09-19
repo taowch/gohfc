@@ -158,7 +158,7 @@ func (sdk *sdkHandler) GetBlockByNumber(blockNum uint64) (*common.Block, error) 
 
 func (sdk *sdkHandler) GetBlockHeight() (uint64, error) {
 	args := []string{"GetChainInfo", sdk.client.Channel.ChannelId}
-	logger.Debugf("GetBlockHeight chainId %s", sdk.client.Channel.ChannelId)
+	//logger.Debugf("GetBlockHeight chainId %s", sdk.client.Channel.ChannelId)
 	resps, err := sdk.QueryByQscc(args)
 	if err != nil {
 		return 0, err
