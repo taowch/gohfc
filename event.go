@@ -100,6 +100,10 @@ func (e *EventListener) newConnection() error {
 	return nil
 }
 
+func (e *EventListener) DisConnect() {
+	e.connection.Close()
+}
+
 func (e *EventListener) SeekNewest() error {
 	if e.connection == nil || e.client == nil {
 		return fmt.Errorf("cannot seek no connection or client")

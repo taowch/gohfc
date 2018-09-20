@@ -25,6 +25,7 @@ type FabricClient struct {
 	Channel    ChannelConfig
 	Mq         Mq
 	Log        Log
+	Event *EventListener
 }
 
 // CreateUpdateChannel read channel config generated (usually) from configtxgen and send it to orderer
@@ -508,6 +509,8 @@ func (c *FabricClient) ListenForFullBlock(ctx context.Context, identity Identity
 		return err
 	}
 	listener.Listen(response, nil)
+
+	c.Event = listener
 	return nil
 }
 
@@ -528,6 +531,8 @@ func (c *FabricClient) ListenForFilteredBlock(ctx context.Context, identity Iden
 		return err
 	}
 	listener.Listen(nil, response)
+
+	c.Event = listener
 	return nil
 }
 
