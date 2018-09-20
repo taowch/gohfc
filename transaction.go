@@ -201,10 +201,6 @@ func sendToPeers(peers []*Peer, prop *peer.SignedProposal) []*PeerResponse {
 }
 
 func createTransactionProposal(identity Identity, cc ChainCode, crypto CryptoSuite) (*transactionProposal, error) {
-	spec, err := chainCodeInvocationSpec(cc)
-	if err != nil {
-		return nil, err
-	}
 	creator, err := marshalProtoIdentity(identity)
 	if err != nil {
 		return nil, err
@@ -214,6 +210,12 @@ func createTransactionProposal(identity Identity, cc ChainCode, crypto CryptoSui
 		return nil, err
 	}
 
+	SetArgsTxid(txId.TransactionId, &cc.Args)
+	
+	spec, err := chainCodeInvocationSpec(cc)
+	if err != nil {
+		return nil, err
+	}
 	extension := &peer.ChaincodeHeaderExtension{ChaincodeId: &peer.ChaincodeID{Name: cc.Name}}
 	channelHeader, err := channelHeader(common.HeaderType_ENDORSER_TRANSACTION, txId, cc.ChannelId, 0, extension)
 	if err != nil {

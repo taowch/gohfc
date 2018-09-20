@@ -2,6 +2,7 @@ package gohfc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/protos/common"
@@ -157,7 +158,7 @@ func (sdk *sdkHandler) GetBlockByNumber(blockNum uint64) (*common.Block, error) 
 
 func (sdk *sdkHandler) GetBlockHeight() (uint64, error) {
 	args := []string{"GetChainInfo", sdk.client.Channel.ChannelId}
-	logger.Debugf("GetBlockHeight chainId %s", sdk.client.Channel.ChannelId)
+	//logger.Debugf("GetBlockHeight chainId %s", sdk.client.Channel.ChannelId)
 	resps, err := sdk.QueryByQscc(args)
 	if err != nil {
 		return 0, err
@@ -220,4 +221,31 @@ func (sdk *sdkHandler) ListenEventFilterBlock() (chan EventBlockResponse, error)
 func (sdk *sdkHandler) ParseCommonBlock(block *common.Block) (*parseBlock.Block, error) {
 	blockObj := parseBlock.ParseBlock(block, 0)
 	return &blockObj, nil
+}
+
+type KeyValue struct {
+	Key   string `json:"key"`   //存储数据的key
+	Value string `json:"value"` //存储数据的value
+}
+
+func SetArgsTxid(txid string, args *[]string) {
+	if len(*args) == 2 && (*args)[0] == "SaveData" {
+		var invokeRequest KeyValue
+		if err := json.Unmarshal([]byte((*args)[1]), &invokeRequest); err != nil {
+			logger.Debugf("SetArgsTxid umarshal invokeRequest failed")
+			return
+		}
+		var msg map[string]interface{}
+		if err := json.Unmarshal([]byte(invokeRequest.Value), &msg); err != nil {
+			logger.Debugf("SetArgsTxid umarshal message failed")
+			return
+		}
+		invokeRequest.Key = txid
+		msg["fabricTxId"] = txid
+		v, _ := json.Marshal(msg)
+		invokeRequest.Value = string(v)
+		tempData, _ := json.Marshal(invokeRequest)
+		//logger.Debugf("SetArgsTxid msg is %s", tempData)
+		(*args)[1] = string(tempData)
+	}
 }
