@@ -126,8 +126,6 @@ func (w *WisHandler) Init() error {
 		}
 		peers[w.PeerName] = peer
 		w.FaCli.Peers = peers
-	} else {
-		wis_logger.Debug("This PeerName is empty!!!!")
 	}
 
 
@@ -139,8 +137,6 @@ func (w *WisHandler) Init() error {
 		}
 		orderers[w.OrderName] = order
 		w.FaCli.Orderers = orderers
-	} else {
-		wis_logger.Debug("This OrderName is empty!!!!")
 	}
 
 	if "" != w.EventPeer {
@@ -151,8 +147,6 @@ func (w *WisHandler) Init() error {
 		}
 		eventpeers[w.EventPeer] = eventpeer
 		w.FaCli.EventPeers = eventpeers
-	} else {
-		wis_logger.Debug("This EventPeer is empty!!!!")
 	}
 
 	var crypto CryptoSuite
