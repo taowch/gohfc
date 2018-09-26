@@ -98,14 +98,14 @@ func (w *WisHandler) ListenForFullBlock(response chan<- parseBlock.Block) error 
 }
 
 // Listen v 1.0.4 -- port ==> 7053
-func (w *WisHandler) Listen(peerName string , response chan<- parseBlock.Block) error {
+func (w *WisHandler) Listen(response chan<- parseBlock.Block) error {
 	err := w.Init()
 	if err != nil {
 		return fmt.Errorf("Init Err : ", err.Error())
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err = w.FaCli.Listen(ctx,w.Ide,peerName,w.Channeluuids,w.Mspids, response)
+	err = w.FaCli.Listen(ctx,w.Ide,w.EventPeer,w.Channeluuids,w.Mspids, response)
 	if err != nil {
 		cancel()
 		return err
