@@ -16,6 +16,9 @@ import (
 	"google.golang.org/grpc"
 	"math"
 	"time"
+	"github.com/hyperledger/fabric/protos/msp"
+	"encoding/pem"
+	"io"
 )
 
 const (
@@ -387,3 +390,103 @@ func NewEventListener(ctx context.Context, crypto CryptoSuite, identity Identity
 
 	return &listener, nil
 }
+
+
+type EventPort struct {
+	event EventListener
+	client peer.Events_ChatClient
+}
+func (e *EventPort) connect(ctx context.Context, p *Peer) error {
+	p.Opts = append(p.Opts, grpc.WithBlock(), grpc.WithTimeout(5*time.Second),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvMsgSize),
+			grpc.MaxCallSendMsgSize(maxSendMsgSize)))
+	conn, err := grpc.Dial(p.Uri, p.Opts...)
+	if err != nil {
+		return err
+	}
+	e.event.connection = conn
+	event := peer.NewEventsClient(conn)
+	cl, err := event.Chat(ctx)
+	if err != nil {
+		return err
+	}
+	e.client = cl
+	return nil
+}
+
+func (e *EventPort) register(mspId string, identity *Identity, crypto CryptoSuite) error {
+	creator, err := proto.Marshal(&msp.SerializedIdentity{
+		Mspid:   mspId,
+		IdBytes: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: identity.Certificate.Raw})})
+	if err != nil {
+		return err
+	}
+
+	interest := &peer.Event{Event: &peer.Event_Register{Register: &peer.Register{
+		Events: []*peer.Interest{
+			{EventType: peer.EventType_BLOCK},
+		}}}, Creator: creator}
+	evtBytes, err := proto.Marshal(interest)
+	if err != nil {
+		return err
+	}
+
+	sb, err := crypto.Sign(evtBytes, identity.PrivateKey)
+	if err != nil {
+		return err
+	}
+	sigEvent := peer.SignedEvent{EventBytes: evtBytes, Signature: sb}
+	if err = e.client.Send(&sigEvent); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e *EventPort) disconnect() {
+	e.client.CloseSend()
+	e.event.connection.Close()
+}
+
+func (e *EventPort) readBlock(response chan<- parseBlock.Block) {
+	for {
+		in, err := e.client.Recv()
+		if err == io.EOF {
+			e.disconnect()
+			return
+		}
+		if err != nil {
+			response <- parseBlock.Block{Error: err}
+			e.disconnect()
+			return
+		}
+
+		switch in.Event.(type) {
+		case *peer.Event_Block:
+			size := uint64((len(in.String())))
+			response <- parseBlock.ParseBlock(in.GetBlock(), size)
+		}
+	}
+}
+
+func newEventListener(ctx context.Context, response chan<- parseBlock.Block, crypto CryptoSuite, identity *Identity, channelId, mspId string, p *Peer) error {
+	hub := EventPort{
+		event: EventListener{
+			Context:      ctx,
+			Peer:         *p,
+			Identity:     *identity,
+			ChannelId:    channelId,
+			Crypto:       crypto,
+		},
+	}
+	err := hub.connect(ctx, p)
+	if err != nil {
+		return err
+	}
+	err = hub.register(mspId, identity, crypto)
+	if err != nil {
+		return err
+	}
+	go hub.readBlock(response)
+	return nil
+}
+
