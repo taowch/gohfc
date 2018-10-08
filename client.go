@@ -499,10 +499,10 @@ func NewFabricClient(path string) (*FabricClient, error) {
 	peers := make(map[string]*Peer)
 	for name, p := range config.Peers {
 		newPeer, err := NewPeerFromConfig(p)
-		newPeer.Name = name
 		if err != nil {
 			return nil, err
 		}
+		newPeer.Name = name
 		peers[name] = newPeer
 
 	}
@@ -510,20 +510,20 @@ func NewFabricClient(path string) (*FabricClient, error) {
 	eventPeers := make(map[string]*Peer)
 	for name, p := range config.EventPeers {
 		newEventPeer, err := NewPeerFromConfig(p)
-		newEventPeer.Name = name
 		if err != nil {
 			return nil, err
 		}
+		newEventPeer.Name = name
 		eventPeers[name] = newEventPeer
 	}
 
 	orderers := make(map[string]*Orderer)
 	for name, o := range config.Orderers {
 		newOrderer, err := NewOrdererFromConfig(o)
-		newOrderer.Name = name
 		if err != nil {
 			return nil, err
 		}
+		newOrderer.Name = name
 		orderers[name] = newOrderer
 	}
 	client := FabricClient{Peers: peers, EventPeers: eventPeers, Orderers: orderers, Crypto: crypto}
