@@ -217,6 +217,26 @@ func (sdk *sdkHandler) ListenEventFilterBlock() (chan EventBlockResponse, error)
 	return ch, nil
 }
 
+// Listen v 1.0.4 -- port ==> 7053
+func (sdk *sdkHandler) Listen(peerName string) (chan parseBlock.Block, error) {
+	channelId := sdk.client.Channel.ChannelId
+	if channelId == "" {
+		return nil, fmt.Errorf("Listen  channelId is empty ")
+	}
+	mspId := sdk.client.Channel.LocalMspId
+	if mspId == "" {
+		return nil, fmt.Errorf("Listen  mspId is empty ")
+	}
+	ch := make(chan parseBlock.Block)
+	ctx, cancel := context.WithCancel(context.Background())
+	err := sdk.client.Listen(ctx, sdk.identity, peerName, channelId, mspId, ch)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	return ch, nil
+}
+
 //解析区块
 func (sdk *sdkHandler) ParseCommonBlock(block *common.Block) (*parseBlock.Block, error) {
 	blockObj := parseBlock.ParseBlock(block, 0)

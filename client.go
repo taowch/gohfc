@@ -536,6 +536,15 @@ func (c *FabricClient) ListenForFilteredBlock(ctx context.Context, identity Iden
 	return nil
 }
 
+// Listen v 1.0.4 -- port ==> 7053
+func (c *FabricClient) Listen(ctx context.Context, identity *Identity, eventPeer,channelId, mspId string, response chan<- parseBlock.Block) error {
+	ep, ok := c.EventPeers[eventPeer]
+	if !ok {
+		return ErrPeerNameNotFound
+	}
+	return newEventListener(ctx, response, c.Crypto, identity,channelId, mspId, ep)
+}
+
 // NewFabricClientFromConfig create a new FabricClient from ClientConfig
 func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
 	var crypto CryptoSuite
