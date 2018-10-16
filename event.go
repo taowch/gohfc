@@ -442,7 +442,7 @@ func (e *EventPort) register(mspId string, identity *Identity, crypto CryptoSuit
 	return nil
 }
 
-func (e *EventPort) disconnect() {
+func (e *EventPort) Disconnect() {
 	e.client.CloseSend()
 	e.event.connection.Close()
 }
@@ -451,12 +451,12 @@ func (e *EventPort) readBlock(response chan<- parseBlock.Block) {
 	for {
 		in, err := e.client.Recv()
 		if err == io.EOF {
-			e.disconnect()
+			e.Disconnect()
 			return
 		}
 		if err != nil {
 			response <- parseBlock.Block{Error: err}
-			e.disconnect()
+			e.Disconnect()
 			return
 		}
 
@@ -468,25 +468,16 @@ func (e *EventPort) readBlock(response chan<- parseBlock.Block) {
 	}
 }
 
-func newEventListener(ctx context.Context, response chan<- parseBlock.Block, crypto CryptoSuite, identity *Identity, channelId, mspId string, p *Peer) error {
-	hub := EventPort{
-		event: EventListener{
-			Context:      ctx,
-			Peer:         *p,
-			Identity:     *identity,
-			ChannelId:    channelId,
-			Crypto:       crypto,
-		},
-	}
-	err := hub.connect(ctx, p)
+func (e *EventPort)newEventListener(response chan<- parseBlock.Block,mspId string) error {
+	err := e.connect(e.event.Context, &e.event.Peer)
 	if err != nil {
 		return err
 	}
-	err = hub.register(mspId, identity, crypto)
+	err = e.register(mspId, &e.event.Identity, e.event.Crypto)
 	if err != nil {
 		return err
 	}
-	go hub.readBlock(response)
+	go e.readBlock(response)
 	return nil
 }
 
