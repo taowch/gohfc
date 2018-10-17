@@ -47,6 +47,9 @@ func (w *WisHandler) Query() (*QueryResponse, error) {
 		peers = append(peers, peer)
 	}
 
+	fmt.Println(peers)
+	fmt.Println(w.FaCli.Peers)
+
 	qRes, err := w.FaCli.Query(*w.Ide, *cc, peers)
 	if err != nil {
 		wis_logger.Debug("Query Err = ", err.Error())
@@ -152,6 +155,7 @@ func (w *WisHandler) Init() error {
 			return fmt.Errorf("Peer NewPeerFromConfig err :", err)
 		}
 		peers[peerName] = peer
+		w.FaCli.Peers = peers
 	}
 
 	if "" != w.OrderName {
