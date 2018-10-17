@@ -12,7 +12,7 @@ import (
 )
 
 type WisHandler struct {
-	PeerConf         PeerConfig
+	PeerConfMap      map[string]PeerConfig
 	OrdererConf      OrdererConfig
 	Mspids           string
 	Pubkeys          string
@@ -21,7 +21,6 @@ type WisHandler struct {
 	Channeluuids     string
 	ChaincodeName    string
 	ChaincodeVersion string
-	PeerName         string
 	EventPeer        string
 	OrderName        string
 	Args             []string
@@ -42,7 +41,13 @@ func (w *WisHandler) Query() (*QueryResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	qRes, err := w.FaCli.Query(*w.Ide, *cc, []string{w.PeerName})
+
+	var peers []string
+	for peer, _ := range w.PeerConfMap {
+		peers = append(peers, peer)
+	}
+
+	qRes, err := w.FaCli.Query(*w.Ide, *cc, peers)
 	if err != nil {
 		wis_logger.Debug("Query Err = ", err.Error())
 		return nil, err
@@ -62,7 +67,12 @@ func (w *WisHandler) Invoke() (*InvokeResponse, error) {
 		return nil, err
 	}
 
-	return w.FaCli.Invoke(*w.Ide, *cc, []string{w.PeerName}, w.OrderName)
+	var peers []string
+	for peer, _ := range w.PeerConfMap {
+		peers = append(peers, peer)
+	}
+
+	return w.FaCli.Invoke(*w.Ide, *cc, peers, w.OrderName)
 }
 
 func (w *WisHandler) ListenEventFullBlock(response chan<- EventBlockResponse) error {
@@ -135,16 +145,14 @@ func (w *WisHandler) Init() error {
 	identity.MspId = w.Mspids
 	w.Ide = identity
 
-	if "" != w.PeerName {
-		peers := make(map[string]*Peer)
-		peer, err := NewPeerFromConfig(w.PeerConf)
+	peers := make(map[string]*Peer)
+	for peerName, peerConf := range w.PeerConfMap {
+		peer, err := NewPeerFromConfig(peerConf)
 		if err != nil {
 			return fmt.Errorf("Peer NewPeerFromConfig err :", err)
 		}
-		peers[w.PeerName] = peer
-		w.FaCli.Peers = peers
+		peers[peerName] = peer
 	}
-
 
 	if "" != w.OrderName {
 		orderers := make(map[string]*Orderer)
@@ -158,7 +166,7 @@ func (w *WisHandler) Init() error {
 
 	if "" != w.EventPeer {
 		eventpeers := make(map[string]*Peer)
-		eventpeer, err := NewPeerFromConfig(w.PeerConf)
+		eventpeer, err := NewPeerFromConfig(w.PeerConfMap[w.EventPeer])
 		if err != nil {
 			return fmt.Errorf("EventPeer NewPeerFromConfig err :", err)
 		}
