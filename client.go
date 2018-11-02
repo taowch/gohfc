@@ -54,10 +54,12 @@ func (c *FabricClient) CreateUpdateChannel(identity Identity, path string, chann
 	return nil
 }
 
-func (c *FabricClient) ConfigUpdate(identity Identity, configUpdate []byte, channelId string, orderer string) error {
+func (c *FabricClient) ConfigUpdate(identity Identity, data []byte, channelId string, orderer string) error {
 
-	configUpdateEnvelope := &common.ConfigUpdateEnvelope{
-		ConfigUpdate:configUpdate,
+	configUpdateEnvelope := &common.ConfigUpdateEnvelope{}
+	err := proto.Unmarshal(data, configUpdateEnvelope)
+	if err != nil {
+		return err
 	}
 
 	ord, ok := c.Orderers[orderer]
