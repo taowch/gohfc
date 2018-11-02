@@ -221,3 +221,8 @@ func (sdk *sdkHandler) ParseCommonBlock(block *common.Block) (*parseBlock.Block,
 	blockObj := parseBlock.ParseBlock(block, 0)
 	return &blockObj, nil
 }
+
+func (sdk *sdkHandler) ConfigUpdate(payload []byte) error {
+	orderName := getSendOrderName()
+	return sdk.client.ConfigUpdate(*sdk.identity, payload, sdk.client.Channel.ChannelId, orderName)
+}

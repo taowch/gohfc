@@ -54,6 +54,31 @@ func (c *FabricClient) CreateUpdateChannel(identity Identity, path string, chann
 	return nil
 }
 
+func (c *FabricClient) ConfigUpdate(identity Identity, configUpdate []byte, channelId string, orderer string) error {
+
+	configUpdateEnvelope := &common.ConfigUpdateEnvelope{
+		ConfigUpdate:configUpdate,
+	}
+
+	ord, ok := c.Orderers[orderer]
+	if !ok {
+		return ErrInvalidOrdererName
+	}
+
+	ou, err := buildAndSignConfigUpdate(identity, configUpdateEnvelope, c.Crypto, channelId)
+	if err != nil {
+		return err
+	}
+	replay, err := ord.Broadcast(ou)
+	if err != nil {
+		return err
+	}
+	if replay.GetStatus() != common.Status_SUCCESS {
+		return errors.New("error creating new channel. See orderer logs for more details")
+	}
+	return nil
+}
+
 // JoinChannel send transaction to one or many Peers to join particular channel.
 // Channel must be created before this operation using `CreateUpdateChannel` or manually using CLI interface.
 // Orderers must be aware of this channel, otherwise operation will fail.

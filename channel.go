@@ -95,3 +95,47 @@ func buildAndSignChannelConfig(identity Identity, configPayload []byte, crypto C
 	}
 	return &common.Envelope{Payload: commonPayload, Signature: signedCommonPayload }, nil
 }
+
+// sign and build config update tx
+func buildAndSignConfigUpdate(identity Identity, configUpdateEnvelope *common.ConfigUpdateEnvelope, crypto CryptoSuite,channelId string) (*common.Envelope, error) {
+	creator, err := marshalProtoIdentity(identity)
+	if err != nil {
+		return nil, err
+	}
+	txId, err := newTransactionId(creator)
+	if err != nil {
+		return nil, err
+	}
+
+	sigHeaderBytes, err := signatureHeader(creator, txId)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := crypto.Sign(append(sigHeaderBytes, configUpdateEnvelope.GetConfigUpdate()...), identity.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	configSignature := new(common.ConfigSignature)
+	configSignature.SignatureHeader = sigHeaderBytes
+	configSignature.Signature = sig
+	configUpdateEnvelope.Signatures = append(configUpdateEnvelope.GetSignatures(), configSignature)
+
+	channelHeaderBytes, err := channelHeader(common.HeaderType_CONFIG_UPDATE, txId, channelId,0,nil)
+	header := header(sigHeaderBytes, channelHeaderBytes)
+
+	envelopeBytes, err := proto.Marshal(configUpdateEnvelope)
+	if err != nil {
+		return nil, err
+	}
+	commonPayload, err := payload(header, envelopeBytes)
+	if err != nil {
+		return nil, err
+	}
+	signedCommonPayload, err := crypto.Sign(commonPayload, identity.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	return &common.Envelope{Payload: commonPayload, Signature: signedCommonPayload }, nil
+}

@@ -29,6 +29,42 @@ func main() {
 			return
 		}
 		logger.Debugf("----invoke--TxID--%s\n", res.TxID)
+	case "configupdate":
+		resVal, err := gohfc.GetHandler().Query([]string{"configupdate"})
+		if err != nil || len(resVal) == 0 {
+			logger.Error(err)
+			return
+		}
+		if resVal[0].Error != nil {
+			logger.Error(resVal[0].Error)
+			return
+		}
+		if resVal[0].Response.Response.GetStatus() != 200 {
+			logger.Error(fmt.Errorf(resVal[0].Response.Response.GetMessage()))
+			return
+		}
+		fmt.Println("build tx success")
+		err = gohfc.GetHandler().ConfigUpdate(resVal[0].Response.Response.GetPayload())
+		if err != nil {
+			fmt.Println("config update error, err : ", err)
+			return
+		}
+		fmt.Println("config update success")
+	case "querytest":
+		resVal, err := gohfc.GetHandler().Query([]string{"getval", "test"})
+		if err != nil || len(resVal) == 0 {
+			logger.Error(err)
+			return
+		}
+		if resVal[0].Error != nil {
+			logger.Error(resVal[0].Error)
+			return
+		}
+		if resVal[0].Response.Response.GetStatus() != 200 {
+			logger.Error(fmt.Errorf(resVal[0].Response.Response.GetMessage()))
+			return
+		}
+		logger.Debugf("----query--result--%s\n",resVal[0].Response.Response.GetPayload())
 	case "query":
 		resVal, err := gohfc.GetHandler().Query([]string{"query", "a"})
 		if err != nil || len(resVal) == 0 {
