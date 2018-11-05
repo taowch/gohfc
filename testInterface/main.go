@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"flag"
 	"encoding/json"
+	"github.com/hyperledger/fabric/msp"
+	"github.com/hyperledger/fabric/core/scc/cbcc/define"
+	"github.com/hyperledger/fabric/protos/peer"
+	"github.com/golang/protobuf/proto"
+	mspprotos "github.com/hyperledger/fabric/protos/msp"
 )
 
 var (
@@ -30,7 +35,63 @@ func main() {
 		}
 		logger.Debugf("----invoke--TxID--%s\n", res.TxID)
 	case "configupdate":
-		resVal, err := gohfc.GetHandler().Query([]string{"configupdate"})
+		channel := "mychannel"
+		msppath := "/opt/gopath/src/github.com/peersafe/worktool/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp"
+
+		mspConfig, err := msp.GetLocalMspConfig(msppath, nil, "Org2MSP")
+		if err != nil {
+			fmt.Println("GetLocalMspConfig Error = ", err)
+			return
+		}
+
+		config := &mspprotos.FabricMSPConfig{}
+		if err := proto.Unmarshal(mspConfig.Config, config); err != nil {
+			return
+		}
+
+		// CreatFlow == AddMember
+		addMember := &define.ContentAddMember{}
+		addMember.Channel = channel
+		member := &define.Member{
+			MspId:     "Org2MSP",
+			Name:      "测试成员1",
+			Role:      define.OPERATION,
+			Status:    0,
+			MSPConfig: mspConfig,
+		}
+
+		member.AnchorInfo = append(member.AnchorInfo, &peer.AnchorPeer{Host: "peer0.org2.example.com", Port: 7250})
+		addMember.Members = append(addMember.Members, member)
+
+		// add member
+		//flow := &define.Flow{
+		//	Type:define.ADD_MEMBERS,
+		//	Content:addMember,
+		//}
+
+		// update anchor
+		//flow := &define.Flow{
+		//	Type:define.MODIFY_ANCHOR_PEERS,
+		//	Content:&define.ContentModifyAnchor{
+		//		MspId:"Org1MSP",
+		//		Channel:channel,
+		//		AnchorInfo:member.AnchorInfo,
+		//	},
+		//}
+
+		// create channel
+		flow := &define.Flow{
+			Type:define.CREAT_CHANNEL,
+			Content:&define.Channel{
+				Channel:"channeltest",
+				MemberList:[]string{"Org1MSP"},
+				AnchorInfo:[][]*peer.AnchorPeer{member.AnchorInfo},
+			},
+		}
+
+		data, _ := json.Marshal(flow)
+
+		resVal, err := gohfc.GetHandler().Query([]string{"GetConfigUpdateEnv", string(data)})
 		if err != nil || len(resVal) == 0 {
 			logger.Error(err)
 			return
@@ -44,7 +105,7 @@ func main() {
 			return
 		}
 		fmt.Println("build tx success")
-		err = gohfc.GetHandler().ConfigUpdate(resVal[0].Response.Response.GetPayload())
+		err = gohfc.GetHandler().ConfigUpdate(resVal[0].Response.Response.GetPayload(), "channeltest")
 		if err != nil {
 			fmt.Println("config update error, err : ", err)
 			return
