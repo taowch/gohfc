@@ -96,6 +96,22 @@ func (sdk *sdkHandler) Invoke(args []string) (*InvokeResponse, error) {
 	return sdk.client.Invoke(*sdk.identity, *chaincode, peerNames, orderName)
 }
 
+func (sdk *sdkHandler) LSCCInvoke(args []string) (*InvokeResponse, error) {
+	peerNames := getSendPeerName()
+	orderName := getSendOrderName()
+	if len(peerNames) == 0 || orderName == "" {
+		return nil, fmt.Errorf("config peer order is err")
+	}
+	chaincode := &ChainCode{
+		ChannelId: "cdc",
+		Type:      ChaincodeSpec_GOLANG,
+		Name:      "LSCC",
+		Version:   "1.0",
+		Args:      args,
+	}
+	return sdk.client.Invoke(*sdk.identity, *chaincode, peerNames, orderName)
+}
+
 // Query query cc
 func (sdk *sdkHandler) Query(args []string) ([]*QueryResponse, error) {
 	peerNames := getSendPeerName()

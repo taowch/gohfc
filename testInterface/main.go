@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
+	"fmt"
 	"github.com/op/go-logging"
 	"github.com/peersafe/gohfc"
 	"fmt"
@@ -14,9 +17,14 @@ import (
 )
 
 var (
-	logger = logging.MustGetLogger("testmodel")
+	logger   = logging.MustGetLogger("testmodel")
 	funcName = flag.String("function", "", "invoke,query,listen")
 )
+
+type ChaincodeLibrary struct {
+	Namespace string
+	SrcPath   string
+}
 
 func main() {
 	flag.Parse()
@@ -27,6 +35,42 @@ func main() {
 	}
 
 	switch *funcName {
+	case "upload":
+		logger.Debugf("=======upload======")
+		nameSpace := "github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02"
+		srcPath := "/opt/gopath"
+		ccname := "mycc"
+		ccversion := "1.0"
+		args, err := CreateUploadChaincodeArgs(ccname, ccversion, srcPath, nameSpace)
+		if err != nil {
+			logger.Errorf("upload CreateUploadChaincodeArgs %s", err)
+			return
+		}
+		res, err := gohfc.GetHandler().LSCCInvoke(args)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		logger.Debugf("----install--TxID--%s\n", res.TxID)
+	case "instantiate":
+		logger.Debugf("=======instantiate======")
+		policy := "OR  ('Org1MSP.member','Org2MSP.member')"
+		initargs := "{\"Args\":[\"init\",\"a\",\"100\",\"b\",\"200\"]}"
+		operation := "deploy"
+		chainid := "mychannel"
+		ccname := "mycc"
+		ccversion := "1.0"
+		args, err := CreateDeplocyChaincodeArgs(operation, chainid, ccname, ccversion, policy, initargs)
+		if err != nil {
+			logger.Errorf("upload CreateUploadChaincodeArgs %s", err)
+			return
+		}
+		res, err := gohfc.GetHandler().LSCCInvoke(args)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		logger.Debugf("----instantiate--TxID--%s\n", res.TxID)
 	case "invoke":
 		res, err := gohfc.GetHandler().Invoke([]string{"invoke", "a", "b", "1"})
 		if err != nil {
@@ -125,7 +169,7 @@ func main() {
 			logger.Error(fmt.Errorf(resVal[0].Response.Response.GetMessage()))
 			return
 		}
-		logger.Debugf("----query--result--%s\n",resVal[0].Response.Response.GetPayload())
+		logger.Debugf("----query--result--%s\n", resVal[0].Response.Response.GetPayload())
 	case "query":
 		resVal, err := gohfc.GetHandler().Query([]string{"query", "a"})
 		if err != nil || len(resVal) == 0 {
@@ -140,7 +184,7 @@ func main() {
 			logger.Error(fmt.Errorf(resVal[0].Response.Response.GetMessage()))
 			return
 		}
-		logger.Debugf("----query--result--%s\n",resVal[0].Response.Response.GetPayload())
+		logger.Debugf("----query--result--%s\n", resVal[0].Response.Response.GetPayload())
 	case "listen":
 		ch, err := gohfc.GetHandler().ListenEventFullBlock()
 		if err != nil {
@@ -149,9 +193,9 @@ func main() {
 		}
 		for {
 			select {
-			case b := <- ch:
+			case b := <-ch:
 				bytes, _ := json.Marshal(b)
-				logger.Debugf("---------%s\n",bytes)
+				logger.Debugf("---------%s\n", bytes)
 			}
 		}
 	default:
