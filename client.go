@@ -67,7 +67,7 @@ func (c *FabricClient) ConfigUpdate(identity Identity, data []byte, channelId st
 		return ErrInvalidOrdererName
 	}
 
-	ou, err := buildAndSignConfigUpdate(identity, configUpdateEnvelope, c.Crypto, channelId)
+	ou, err := buildConfigUpdate(identity, configUpdateEnvelope, c.Crypto, channelId)
 	if err != nil {
 		return err
 	}
