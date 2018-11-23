@@ -6,11 +6,14 @@ package gohfc
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/hyperledger/fabric/protos/peer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+	"io/ioutil"
 	"time"
 )
 
@@ -59,11 +62,31 @@ func NewPeerFromConfig(conf PeerConfig) (*Peer, error) {
 	if !conf.UseTLS {
 		p.Opts = []grpc.DialOption{grpc.WithInsecure()}
 	} else if p.caPath != "" {
-		creds, err := credentials.NewClientTLSFromFile(p.caPath, "")
-		if err != nil {
-			return nil, fmt.Errorf("cannot read peer %s credentials err is: %v", p.Name, err)
+		if conf.TlsMutual {
+			cert, err := tls.LoadX509KeyPair(conf.ClientCert, conf.ClientKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed to Load client keypair: %s\n", err.Error())
+			}
+			caPem, err := ioutil.ReadFile(conf.TlsPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read CA cert file %s\n", conf.TlsPath)
+			}
+			certpool := x509.NewCertPool()
+			certpool.AppendCertsFromPEM(caPem)
+			c := &tls.Config{
+				MinVersion:   tls.VersionTLS12,
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      certpool,
+				//InsecureSkipVerify: true, // Client verifies server's cert if false, else skip.
+			}
+			p.Opts = append(p.Opts, grpc.WithTransportCredentials(credentials.NewTLS(c)))
+		} else {
+			creds, err := credentials.NewClientTLSFromFile(p.caPath, "")
+			if err != nil {
+				return nil, fmt.Errorf("cannot read peer %s credentials err is: %v", p.Name, err)
+			}
+			p.Opts = append(p.Opts, grpc.WithTransportCredentials(creds))
 		}
-		p.Opts = append(p.Opts, grpc.WithTransportCredentials(creds))
 	}
 
 	p.Opts = append(p.Opts,

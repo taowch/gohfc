@@ -53,7 +53,9 @@ func parsePolicy() error {
 	policyOrgs := handler.client.Channel.Orgs
 	policyRule := handler.client.Channel.Rule
 	if len(policyOrgs) == 0 || policyRule == "" {
-		return fmt.Errorf("channl policy config is err")
+		for _, v := range handler.client.Peers {
+			peerNames = append(peerNames, v.Name)
+		}
 	}
 	for ordname := range handler.client.Orderers {
 		orderNames = append(orderNames, ordname)
@@ -62,11 +64,13 @@ func parsePolicy() error {
 		eventName = v.Name
 		break
 	}
-	for _, v := range handler.client.Peers {
-		if containsStr(policyOrgs, v.OrgName) {
-			orgPeerMap[v.OrgName] = append(orgPeerMap[v.OrgName], v.Name)
-			if policyRule == "or" {
-				orRulePeerNames = append(orRulePeerNames, v.Name)
+	if len(policyOrgs) > 0 {
+		for _, v := range handler.client.Peers {
+			if containsStr(policyOrgs, v.OrgName) {
+				orgPeerMap[v.OrgName] = append(orgPeerMap[v.OrgName], v.Name)
+				if policyRule == "or" {
+					orRulePeerNames = append(orRulePeerNames, v.Name)
+				}
 			}
 		}
 	}
@@ -81,6 +85,9 @@ func getSendOrderName() string {
 func getSendPeerName() []string {
 	if len(orRulePeerNames) > 0 {
 		return []string{orRulePeerNames[generateRangeNum(0, len(orRulePeerNames))]}
+	}
+	if len(peerNames) >0 {
+		return peerNames
 	}
 	var sendNameList []string
 	policyRule := handler.client.Channel.Rule

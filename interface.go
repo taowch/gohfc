@@ -25,6 +25,7 @@ var (
 	handler         sdkHandler
 	orgPeerMap      = make(map[string][]string)
 	orderNames      []string
+	peerNames      []string
 	eventName       string
 	orRulePeerNames []string
 )
@@ -160,6 +161,43 @@ func (sdk *sdkHandler) GetBlockHeight() (uint64, error) {
 	args := []string{"GetChainInfo", sdk.client.Channel.ChannelId}
 	//logger.Debugf("GetBlockHeight chainId %s", sdk.client.Channel.ChannelId)
 	resps, err := sdk.QueryByQscc(args)
+	if err != nil {
+		return 0, err
+	} else if len(resps) == 0 {
+		return 0, fmt.Errorf("GetChainInfo is empty respons from peer qscc")
+	}
+
+	if resps[0].Error != nil {
+		return 0, resps[0].Error
+	}
+
+	data := resps[0].Response.Response.Payload
+	var chainInfo = new(common.BlockchainInfo)
+	err = proto.Unmarshal(data, chainInfo)
+	if err != nil {
+		return 0, fmt.Errorf("GetChainInfo unmarshal from payload failed: %s", err.Error())
+	}
+	return chainInfo.Height, nil
+}
+
+func (sdk *sdkHandler) GetBlockHeightByEventName() (uint64, error) {
+	args := []string{"GetChainInfo", sdk.client.Channel.ChannelId}
+	channelid := handler.client.Channel.ChannelId
+	mspId := handler.client.Channel.LocalMspId
+	if channelid == "" || mspId == "" {
+		return 0, fmt.Errorf("channelid or ccname or mspid is empty")
+	}
+	if eventName == "" {
+		return 0, fmt.Errorf("event peername is empty")
+	}
+	chaincode := ChainCode{
+		ChannelId: channelid,
+		Type:      ChaincodeSpec_GOLANG,
+		Name:      QSCC,
+		Args:      args,
+	}
+
+	resps, err := sdk.client.QueryByEvent(*sdk.identity, chaincode, []string{eventName})
 	if err != nil {
 		return 0, err
 	} else if len(resps) == 0 {

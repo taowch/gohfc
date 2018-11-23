@@ -18,7 +18,7 @@ type ClientConfig struct {
 	EventPeers    map[string]PeerConfig    `yaml:"eventPeers"`
 	ChannelConfig `yaml:"channel"`
 	Mq            `yaml:"mq"`
-	Log            `yaml:"log"`
+	Log           `yaml:"log"`
 }
 
 type ChannelConfig struct {
@@ -62,17 +62,23 @@ type CryptoConfig struct {
 
 // PeerConfig hold config values for Peer. ULR is in address:port notation
 type PeerConfig struct {
-	Host    string `yaml:"host"`
-	OrgName string `yaml:"orgName"`
-	UseTLS  bool   `yaml:"useTLS"`
-	TlsPath string `yaml:"tlsPath"`
+	Host       string `yaml:"host"`
+	OrgName    string `yaml:"orgName"`
+	UseTLS     bool   `yaml:"useTLS"`
+	TlsPath    string `yaml:"tlsPath"`
+	TlsMutual  bool   `yaml:"tlsMutual"`
+	ClientCert string `yaml:"clientCert"`
+	ClientKey  string `yaml:"clientKey"`
 }
 
 // OrdererConfig hold config values for Orderer. ULR is in address:port notation
 type OrdererConfig struct {
-	Host    string `yaml:"host"`
-	UseTLS  bool   `yaml:"useTLS"`
-	TlsPath string `yaml:"tlsPath"`
+	Host       string `yaml:"host"`
+	UseTLS     bool   `yaml:"useTLS"`
+	TlsPath    string `yaml:"tlsPath"`
+	TlsMutual  bool   `yaml:"tlsMutual"`
+	ClientCert string `yaml:"clientCert"`
+	ClientKey  string `yaml:"clientKey"`
 }
 
 // NewFabricClientConfig create config from provided yaml file in path

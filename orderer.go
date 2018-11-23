@@ -5,15 +5,18 @@ License: Apache License Version 2.0
 package gohfc
 
 import (
-	"google.golang.org/grpc"
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/hyperledger/fabric/protos/orderer"
-	"context"
-	"fmt"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"github.com/golang/protobuf/proto"
-	"time"
 	"google.golang.org/grpc/keepalive"
+	"io/ioutil"
+	"time"
 )
 
 // Orderer expose API's to communicate with orderers.
@@ -145,11 +148,31 @@ func NewOrdererFromConfig(conf OrdererConfig) (*Orderer, error) {
 	if !conf.UseTLS {
 		o.Opts = []grpc.DialOption{grpc.WithInsecure()}
 	} else if o.caPath != "" {
-		creds, err := credentials.NewClientTLSFromFile(o.caPath, "")
-		if err != nil {
-			return nil, fmt.Errorf("cannot read orderer %s credentials err is: %v", o.Name, err)
+		if conf.TlsMutual {
+			cert, err := tls.LoadX509KeyPair(conf.ClientCert, conf.ClientKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed to Load client keypair: %s\n", err.Error())
+			}
+			caPem, err := ioutil.ReadFile(conf.TlsPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read CA cert file %s\n", conf.TlsPath)
+			}
+			certpool := x509.NewCertPool()
+			certpool.AppendCertsFromPEM(caPem)
+			c := &tls.Config{
+				MinVersion:   tls.VersionTLS12,
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      certpool,
+				//InsecureSkipVerify: true, // Client verifies server's cert if false, else skip.
+			}
+			o.Opts = append(o.Opts, grpc.WithTransportCredentials(credentials.NewTLS(c)))
+		} else {
+			creds, err := credentials.NewClientTLSFromFile(o.caPath, "")
+			if err != nil {
+				return nil, fmt.Errorf("cannot read orderer %s credentials err is: %v", o.Name, err)
+			}
+			o.Opts = append(o.Opts, grpc.WithTransportCredentials(creds))
 		}
-		o.Opts = append(o.Opts, grpc.WithTransportCredentials(creds))
 	}
 	o.Opts = append(o.Opts,
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
