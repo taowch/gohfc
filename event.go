@@ -6,19 +6,19 @@ package gohfc
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric/protos/common"
+	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/hyperledger/fabric/protos/orderer"
 	"github.com/hyperledger/fabric/protos/peer"
 	"github.com/peersafe/gohfc/parseBlock"
 	"google.golang.org/grpc"
+	"io"
 	"math"
 	"time"
-	"github.com/hyperledger/fabric/protos/msp"
-	"encoding/pem"
-	"io"
 )
 
 const (
@@ -77,7 +77,7 @@ type EventBlockResponseTransactionEvent struct {
 
 func (e *EventListener) newConnection() error {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	conn, err := grpc.DialContext(ctx, e.Peer.Uri, e.Peer.Opts...)
 	if err != nil {
@@ -325,9 +325,9 @@ func (e *EventListener) createSeekEnvelope(start *orderer.SeekPosition, stop *or
 			Seconds: time.Now().Unix(),
 			Nanos:   0,
 		},
-		ChannelId: e.ChannelId,
-		Epoch:     0,
-		// TlsCertHash:[]
+		ChannelId:   e.ChannelId,
+		Epoch:       0,
+		TlsCertHash: e.Peer.tlsCertHash,
 	})
 	if err != nil {
 		return nil, err
@@ -391,11 +391,11 @@ func NewEventListener(ctx context.Context, crypto CryptoSuite, identity Identity
 	return &listener, nil
 }
 
-
 type EventPort struct {
-	event EventListener
+	event  EventListener
 	client peer.Events_ChatClient
 }
+
 func (e *EventPort) connect(ctx context.Context, p *Peer) error {
 	p.Opts = append(p.Opts, grpc.WithBlock(), grpc.WithTimeout(5*time.Second),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvMsgSize),
@@ -468,7 +468,7 @@ func (e *EventPort) readBlock(response chan<- parseBlock.Block) {
 	}
 }
 
-func (e *EventPort)newEventListener(response chan<- parseBlock.Block,mspId string) error {
+func (e *EventPort) newEventListener(response chan<- parseBlock.Block, mspId string) error {
 	err := e.connect(e.event.Context, &e.event.Peer)
 	if err != nil {
 		return err
@@ -480,4 +480,3 @@ func (e *EventPort)newEventListener(response chan<- parseBlock.Block,mspId strin
 	go e.readBlock(response)
 	return nil
 }
-

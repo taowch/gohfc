@@ -1,11 +1,11 @@
 package gohfc
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"context"
 
 	"github.com/op/go-logging"
 	"github.com/peersafe/gohfc/parseBlock"
@@ -85,7 +85,7 @@ func (w *WisHandler) ListenEventFullBlock(response chan<- EventBlockResponse) er
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err = w.FaCli.ListenForFilteredBlock(ctx,*w.Ide,w.EventPeer,w.Channeluuids,response)
+	err = w.FaCli.ListenForFilteredBlock(ctx, *w.Ide, w.EventPeer, w.Channeluuids, response)
 	if err != nil {
 		cancel()
 		return err
@@ -101,7 +101,7 @@ func (w *WisHandler) ListenForFullBlock(response chan<- parseBlock.Block) error 
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err = w.FaCli.ListenForFullBlock(ctx,*w.Ide,w.EventPeer,w.Channeluuids,response)
+	err = w.FaCli.ListenForFullBlock(ctx, *w.Ide, w.EventPeer, w.Channeluuids, response)
 	if err != nil {
 		cancel()
 		return err
@@ -118,14 +118,13 @@ func (w *WisHandler) Listen(response chan<- parseBlock.Block) error {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	err = w.FaCli.Listen(ctx,w.Ide,w.EventPeer,w.Channeluuids,w.Mspids, response)
+	err = w.FaCli.Listen(ctx, w.Ide, w.EventPeer, w.Channeluuids, w.Mspids, response)
 	if err != nil {
 		cancel()
 		return err
 	}
 	return nil
 }
-
 
 func (w *WisHandler) Init() error {
 	format := logging.MustStringFormatter("%{shortfile} %{time:2006-01-02 15:04:05.000} [%{module}] %{level:.4s} : %{message}")
@@ -134,7 +133,7 @@ func (w *WisHandler) Init() error {
 
 	logging.SetBackend(backendFormatter).SetLevel(logging.DEBUG, "main")
 
-	fabricClient :=  &FabricClient{}
+	fabricClient := &FabricClient{}
 	w.FaCli = fabricClient
 
 	pubkey := findCurt(w.Pubkeys)
@@ -147,36 +146,6 @@ func (w *WisHandler) Init() error {
 	}
 	identity.MspId = w.Mspids
 	w.Ide = identity
-
-	peers := make(map[string]*Peer)
-	for peerName, peerConf := range w.PeerConfMap {
-		peer, err := NewPeerFromConfig(peerConf)
-		if err != nil {
-			return fmt.Errorf("Peer NewPeerFromConfig err :", err)
-		}
-		peers[peerName] = peer
-		w.FaCli.Peers = peers
-	}
-
-	if "" != w.OrderName {
-		orderers := make(map[string]*Orderer)
-		order, err := NewOrdererFromConfig(w.OrdererConf)
-		if err != nil {
-			return fmt.Errorf("Order NewOrdererFromConfig err :", err)
-		}
-		orderers[w.OrderName] = order
-		w.FaCli.Orderers = orderers
-	}
-
-	if "" != w.EventPeer {
-		eventpeers := make(map[string]*Peer)
-		eventpeer, err := NewPeerFromConfig(w.PeerConfMap[w.EventPeer])
-		if err != nil {
-			return fmt.Errorf("EventPeer NewPeerFromConfig err :", err)
-		}
-		eventpeers[w.EventPeer] = eventpeer
-		w.FaCli.EventPeers = eventpeers
-	}
 
 	var crypto CryptoSuite
 	switch w.CryptoFamilys {
@@ -207,6 +176,36 @@ func (w *WisHandler) Init() error {
 		return ErrInvalidAlgorithmFamily
 	}
 	w.FaCli.Crypto = crypto
+
+	peers := make(map[string]*Peer)
+	for peerName, peerConf := range w.PeerConfMap {
+		peer, err := NewPeerFromConfig(peerConf, crypto)
+		if err != nil {
+			return fmt.Errorf("Peer NewPeerFromConfig err :", err)
+		}
+		peers[peerName] = peer
+		w.FaCli.Peers = peers
+	}
+
+	if "" != w.OrderName {
+		orderers := make(map[string]*Orderer)
+		order, err := NewOrdererFromConfig(w.OrdererConf)
+		if err != nil {
+			return fmt.Errorf("Order NewOrdererFromConfig err :", err)
+		}
+		orderers[w.OrderName] = order
+		w.FaCli.Orderers = orderers
+	}
+
+	if "" != w.EventPeer {
+		eventpeers := make(map[string]*Peer)
+		eventpeer, err := NewPeerFromConfig(w.PeerConfMap[w.EventPeer], crypto)
+		if err != nil {
+			return fmt.Errorf("EventPeer NewPeerFromConfig err :", err)
+		}
+		eventpeers[w.EventPeer] = eventpeer
+		w.FaCli.EventPeers = eventpeers
+	}
 
 	return nil
 }

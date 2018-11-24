@@ -19,14 +19,15 @@ import (
 
 // Peer expose API's to communicate with peer
 type Peer struct {
-	Name    string
-	OrgName string
-	Uri     string
-	MspId   string
-	Opts    []grpc.DialOption
-	caPath  string
-	conn    *grpc.ClientConn
-	client  peer.EndorserClient
+	Name        string
+	OrgName     string
+	Uri         string
+	MspId       string
+	Opts        []grpc.DialOption
+	caPath      string
+	tlsCertHash []byte
+	conn        *grpc.ClientConn
+	client      peer.EndorserClient
 }
 
 // PeerResponse is response from peer transaction request
@@ -57,7 +58,7 @@ func (p *Peer) Endorse(resp chan *PeerResponse, prop *peer.SignedProposal) {
 }
 
 // NewPeerFromConfig creates new peer from provided config
-func NewPeerFromConfig(conf PeerConfig) (*Peer, error) {
+func NewPeerFromConfig(conf PeerConfig, cryptoSuite CryptoSuite) (*Peer, error) {
 	p := Peer{Uri: conf.Host, caPath: conf.TlsPath}
 	if !conf.UseTLS {
 		p.Opts = []grpc.DialOption{grpc.WithInsecure()}
@@ -66,6 +67,9 @@ func NewPeerFromConfig(conf PeerConfig) (*Peer, error) {
 			cert, err := tls.LoadX509KeyPair(conf.ClientCert, conf.ClientKey)
 			if err != nil {
 				return nil, fmt.Errorf("failed to Load client keypair: %s\n", err.Error())
+			}
+			if cryptoSuite != nil {
+				p.tlsCertHash = cryptoSuite.Hash(cert.Certificate[0])
 			}
 			caPem, err := ioutil.ReadFile(conf.TlsPath)
 			if err != nil {

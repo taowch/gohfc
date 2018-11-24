@@ -605,7 +605,7 @@ func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
 
 	peers := make(map[string]*Peer)
 	for name, p := range config.Peers {
-		newPeer, err := NewPeerFromConfig(p)
+		newPeer, err := NewPeerFromConfig(p, crypto)
 		if err != nil {
 			return nil, err
 		}
@@ -617,7 +617,7 @@ func NewFabricClientFromConfig(config ClientConfig) (*FabricClient, error) {
 
 	eventPeers := make(map[string]*Peer)
 	for name, p := range config.EventPeers {
-		newEventPeer, err := NewPeerFromConfig(p)
+		newEventPeer, err := NewPeerFromConfig(p, crypto)
 		if err != nil {
 			return nil, err
 		}

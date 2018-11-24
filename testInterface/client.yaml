@@ -20,6 +20,15 @@ peers:
     tlsMutual: true
     clientCert: /opt/gopath/src/github.com/peersafe/worktool/fabric/worktool/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
     clientKey: /opt/gopath/src/github.com/peersafe/worktool/fabric/worktool/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.key
+eventPeers:
+  peer01:
+    host: peer0.org1.example.com:7051
+    orgName: org1
+    useTLS: true
+    tlsPath: /opt/gopath/src/github.com/peersafe/worktool/fabric/worktool/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    tlsMutual: true
+    clientCert: /opt/gopath/src/github.com/peersafe/worktool/fabric/worktool/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
+    clientKey: /opt/gopath/src/github.com/peersafe/worktool/fabric/worktool/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.key
 channel:
     mspConfigPath: /opt/gopath/src/github.com/peersafe/worktool/fabric/worktool/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
     localMspId:          Org1MSP
